@@ -1,5 +1,5 @@
 /**
- * Role/permission constants — mirrored from packages/shared/src/permissions
+ * Role/permission constants — mirrored from web/src/shared/permissions
  * (functions stay dependency-free of the workspace so `firebase deploy` needs no bundling).
  * Keep in sync when editing either side.
  */

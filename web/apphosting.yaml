@@ -1,0 +1,49 @@
+# Firebase App Hosting config for the LJ Educare Next.js app.
+# This file lives in the backend's ROOT DIRECTORY — set that to "web" when you
+# create/configure the App Hosting backend in the Firebase console.
+# Docs: https://firebase.google.com/docs/app-hosting/configure
+
+runConfig:
+  minInstances: 0
+  maxInstances: 4
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+env:
+  # ── Firebase client config (PUBLIC — safe to commit; inlined into the browser
+  #    bundle at build time). Available at BUILD by default. ──
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    value: AIzaSyCfl1nfoV09AkV7HjX7ImQizuuY2xtT4xg
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: ljeducare.firebaseapp.com
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: ljeducare
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: ljeducare.firebasestorage.app
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    value: "852483320444"
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    value: 1:852483320444:web:b81cae0f6ababfcc7bb7f9
+
+  # ── Site identity ──
+  - variable: NEXT_PUBLIC_SITE_NAME
+    value: LJ Educare
+  - variable: NEXT_PUBLIC_DEFAULT_CURRENCY
+    value: LKR
+  # UPDATE this to your live backend URL after the first rollout
+  # (Firebase console → App Hosting shows it, e.g. https://ljeducare--ljeducare.<region>.hosted.app),
+  # or your custom domain once connected.
+  - variable: NEXT_PUBLIC_SITE_URL
+    value: https://ljeducare.web.app
+
+  # ── Server-side secrets (Cloud Secret Manager). Create them first with:
+  #      firebase apphosting:secrets:set AUTH_COOKIE_SIGNATURE_KEY_CURRENT
+  #      firebase apphosting:secrets:set AUTH_COOKIE_SIGNATURE_KEY_PREVIOUS
+  #      firebase apphosting:secrets:set REVALIDATE_SECRET ──
+  - variable: AUTH_COOKIE_SIGNATURE_KEY_CURRENT
+    secret: AUTH_COOKIE_SIGNATURE_KEY_CURRENT
+  - variable: AUTH_COOKIE_SIGNATURE_KEY_PREVIOUS
+    secret: AUTH_COOKIE_SIGNATURE_KEY_PREVIOUS
+  - variable: REVALIDATE_SECRET
+    secret: REVALIDATE_SECRET

@@ -1,5 +1,5 @@
 /**
- * CJS mirror of packages/shared/src/money — KEEP IN SYNC when editing either.
+ * CJS mirror of web/src/shared/money — KEEP IN SYNC when editing either.
  * (Functions deploy standalone; workspace imports don't survive `firebase deploy`.)
  */
 const ZERO_DECIMAL = ['JPY', 'KRW', 'VND', 'CLP', 'ISK', 'UGX', 'RWF'];

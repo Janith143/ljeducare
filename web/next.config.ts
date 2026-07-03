@@ -1,8 +1,6 @@
 import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
-    // Shared workspace package — transpile its output for the app bundle.
-    transpilePackages: ['@ljeducare/shared'],
     // firebase-admin must stay a Node.js external in server components.
     serverExternalPackages: ['firebase-admin'],
     images: {

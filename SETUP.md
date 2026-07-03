@@ -39,14 +39,21 @@ For server-side admin access in local dev **without** emulators, download a serv
 
 ## 4. Install & run locally (emulators)
 
+The web app (`web/`) is a self-contained Next.js app — its shared code lives in
+`web/src/shared` (no npm workspace, so App Hosting can build it directly).
+
 ```bash
-npm install
-npm run build:shared          # build @ljeducare/shared once
+npm install --prefix web      # install the web app
+npm install                   # root: firebase-admin for the seed script
 firebase emulators:start      # auth:9099 firestore:8080 storage:9199 ui:4000
 # in another terminal:
 npm run seed                  # demo users (see below) + currencies + sample content
 npm run dev                   # http://localhost:3000
 ```
+
+> On Windows the Java Firestore emulator may fail with an AF_UNIX socket error.
+> If so, run the emulators in Docker instead:
+> `docker compose -f dev/emulators/docker-compose.yml up -d`
 
 Demo logins (all `password123`): `admin@lj.test` (main_admin), `manager@lj.test`,
 `teacheradmin@lj.test`, `teacher@lj.test`, `student@lj.test`, `kiosk@lj.test`.
@@ -76,14 +83,33 @@ Demo logins (all `password123`): `admin@lj.test` (main_admin), `manager@lj.test`
 
 ## 6. Deploy
 
-Order matters on first deploy:
+**a. Rules, indexes, storage, functions** (from repo root):
 
 ```bash
-npm run build                                        # shared + web
 firebase deploy --only firestore:rules,firestore:indexes,storage
-firebase deploy --only functions
-# App Hosting: console → App Hosting → create backend → connect repo (root dir: web/)
+firebase deploy --only functions          # auth-security, sale-handler, send-notification
 ```
+
+**b. App Hosting (the web app)** — auto-rollout from GitHub:
+
+1. Console → **App Hosting** → your backend → **Settings** → set the
+   **Root directory** to `web` (the app is in `web/`, and `web/apphosting.yaml`
+   configures it). This is required — the repo root is not a Next.js app.
+2. Create the runtime secrets (they're referenced by `web/apphosting.yaml`):
+   ```bash
+   # two random 32+ char strings for signing session cookies:
+   firebase apphosting:secrets:set AUTH_COOKIE_SIGNATURE_KEY_CURRENT
+   firebase apphosting:secrets:set AUTH_COOKIE_SIGNATURE_KEY_PREVIOUS
+   firebase apphosting:secrets:set REVALIDATE_SECRET
+   ```
+   Grant the backend access when prompted (or `firebase apphosting:secrets:grantaccess`).
+3. Push to the connected branch — App Hosting builds and rolls out automatically.
+
+**c. App Hosting service-account permissions.** The web app's admin actions
+(create staff, suspend users, read Firestore server-side) run as the App Hosting
+compute service account. Grant it, in the Google Cloud console → IAM (or `gcloud`):
+`roles/datastore.user` and `roles/firebaseauth.admin` (or simply **Firebase Admin**).
+If admin user-management errors with permission denied, this is why.
 
 ## 7. Bootstrap the first admin
 

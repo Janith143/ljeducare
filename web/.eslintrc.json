@@ -14,6 +14,11 @@
     {
       "files": ["**/*.test.ts", "**/*.test.tsx"],
       "rules": { "no-restricted-syntax": "off" }
+    },
+    {
+      "comment": "Money module owns the sanctioned toFixed usage (gateway payloads, rounding).",
+      "files": ["src/shared/money/**"],
+      "rules": { "no-restricted-syntax": "off" }
     }
   ]
 }
