@@ -41,6 +41,7 @@ export default function CourseForm({ existing }: { existing?: Course }) {
             usdOverride: f.get('usdOverride') ? Number(f.get('usdOverride')) : null,
             medium: String(f.get('medium') ?? ''),
             grade: String(f.get('grade') ?? ''),
+            category: String(f.get('category') ?? ''),
             lectures: lectures.map(({ key, ...l }) => (void key, l)),
         };
         startTransition(async () => {
@@ -69,6 +70,7 @@ export default function CourseForm({ existing }: { existing?: Course }) {
                     <input name="medium" placeholder="Medium" defaultValue={existing?.medium} className="input" />
                     <input name="grade" placeholder="Grade" defaultValue={existing?.grade} className="input" />
                 </div>
+                <input name="category" placeholder="Category (optional)" defaultValue={existing?.category} className="input" />
                 <textarea name="description" rows={4} placeholder="Description" defaultValue={existing?.description} className="input" />
             </section>
 

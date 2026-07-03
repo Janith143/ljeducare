@@ -33,6 +33,7 @@ export default function ClassForm({ existing }: { existing?: LiveClass }) {
             weeklyPaymentOption: String(f.get('weeklyPaymentOption') ?? 'per_month') as 'per_session' | 'per_month',
             medium: String(f.get('medium') ?? ''),
             grade: String(f.get('grade') ?? ''),
+            category: String(f.get('category') ?? ''),
             joiningLink: String(f.get('joiningLink') ?? ''),
             recordingMaxViews: Number(f.get('recordingMaxViews') ?? 0),
             recordingExpiryDays: Number(f.get('recordingExpiryDays') ?? 60),
@@ -72,6 +73,7 @@ export default function ClassForm({ existing }: { existing?: LiveClass }) {
                     <input name="medium" placeholder="Medium (Sinhala…)" defaultValue={existing?.medium} className="input" />
                     <input name="grade" placeholder="Grade" defaultValue={existing?.grade} className="input" />
                 </div>
+                <input name="category" placeholder="Category (optional, e.g. Theory / Revision)" defaultValue={existing?.category} className="input" />
             </section>
 
             <section className="card space-y-3">

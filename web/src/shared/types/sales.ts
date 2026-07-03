@@ -61,6 +61,9 @@ export interface Sale extends SaleMoneySnapshot {
     /** Free enrollment via "make next session free" — forces single-session access. */
     freeSession?: boolean;
 
+    /** YYYY-MM the payment covers, for per-month weekly classes (access gating). */
+    coveredMonth?: string;
+
     purchaseMetadata?: {
         type: 'full' | 'month' | 'session' | 'installment';
         index?: number;

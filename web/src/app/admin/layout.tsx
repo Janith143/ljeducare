@@ -24,6 +24,7 @@ const ADMIN_NAV: (NavItem & { perm: Permission })[] = [
     { href: '/admin/students', label: 'Student Lookup', perm: 'students' },
     { href: '/admin/exams', label: 'Exams', perm: 'exams' },
     { href: '/admin/certificates', label: 'Certificates', perm: 'certificates' },
+    { href: '/admin/communications', label: 'Communications', perm: 'communications' },
     { href: '/admin/settings', label: 'Settings', perm: 'settings' },
     { href: '/admin/activity-logs', label: 'Activity Logs', perm: 'activity_logs' },
     { href: '/admin/data-privacy', label: 'Data Privacy', perm: 'data_privacy' },
@@ -42,6 +43,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
                 nav={nav}
                 userName={user.name ?? user.email ?? ''}
                 roleLabel={ROLE_LABELS[user.role] ?? user.role}
+                uid={user.uid}
             >
                 {children}
             </DashboardShell>

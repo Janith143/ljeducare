@@ -1,8 +1,10 @@
 import Link from 'next/link';
 import type { Certificate } from '@ljeducare/shared';
 import { COLLECTIONS } from '@ljeducare/shared';
+import CertificatePdfButton from '@/components/certificates/CertificatePdfButton';
 import { requireRole } from '@/lib/auth/session';
 import { adminDb } from '@/lib/firebase/admin';
+import { SITE } from '@/lib/site';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,12 +33,25 @@ export default async function StudentCertificatesPage() {
                                 Issued {cert.issuedAt.slice(0, 10)}
                             </p>
                             <p className="font-mono text-sm">{cert.verificationId}</p>
-                            <Link
-                                href={`/verify/${cert.verificationId}`}
-                                className="text-sm font-medium text-primary hover:underline"
-                            >
-                                Public verification page →
-                            </Link>
+                            <div className="flex items-center gap-3 pt-1">
+                                <CertificatePdfButton
+                                    cert={{
+                                        studentName: cert.studentName,
+                                        itemTitle: cert.itemTitle,
+                                        teacherName: cert.teacherName,
+                                        issuedAt: cert.issuedAt,
+                                        verificationId: cert.verificationId,
+                                    }}
+                                    siteName={SITE.name}
+                                    siteUrl={SITE.url}
+                                />
+                                <Link
+                                    href={`/verify/${cert.verificationId}`}
+                                    className="text-sm font-medium text-primary hover:underline"
+                                >
+                                    Verify →
+                                </Link>
+                            </div>
                         </div>
                     ))}
                 </div>

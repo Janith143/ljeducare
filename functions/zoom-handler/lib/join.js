@@ -31,6 +31,21 @@ const joinZoomClass = onCall({ secrets: SECRETS }, async (request) => {
     const isFree = cls.pricing?.isFree || !(cls.pricing?.basePrice > 0);
     const enrolled = (student.enrolledClassIds || []).map(String).includes(String(classId));
     if (!isFree && !enrolled) throw new HttpsError('permission-denied', 'Enroll in this class to join.');
+
+    // Per-month classes: access requires a completed sale covering the current month.
+    if (!isFree && cls.weeklyPaymentOption === 'per_month') {
+        const month = new Date().toISOString().slice(0, 7);
+        const salesSnap = await db
+            .collection('sales')
+            .where('studentId', '==', uid)
+            .where('itemId', '==', String(classId))
+            .where('status', '==', 'completed')
+            .get();
+        const covered = salesSnap.docs.some((d) => d.data().coveredMonth === month);
+        if (!covered) {
+            throw new HttpsError('failed-precondition', `RENEW_REQUIRED: renew this class for ${month} to join.`);
+        }
+    }
     if (cls.meetProvider !== 'zoom' || !cls.zoomMeetingId) {
         throw new HttpsError('failed-precondition', 'This class has no Zoom meeting.');
     }

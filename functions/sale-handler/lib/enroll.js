@@ -76,6 +76,12 @@ const initiateEnrollment = onCall(async (request) => {
             ? buildSaleSnapshot(price, settings)
             : { currency, amount: 0, baseAmount: 0, fxRate: 1 };
 
+    // Per-month weekly classes carry a coveredMonth (YYYY-MM) so access is tied to
+    // the month paid for, not the sale date (pay-June-30-for-July works correctly).
+    const isPerMonth = itemType === 'class' && resolved.item.weeklyPaymentOption === 'per_month';
+    const requestedMonth = /^\d{4}-\d{2}$/.test(request.data?.coveredMonth || '') ? request.data.coveredMonth : null;
+    const coveredMonth = isPerMonth ? requestedMonth || new Date().toISOString().slice(0, 7) : null;
+
     const sale = {
         id: saleId,
         studentId: uid,
@@ -85,6 +91,7 @@ const initiateEnrollment = onCall(async (request) => {
         itemName: resolved.itemName,
         enrollField: resolved.enrollField,
         saleDate: new Date().toISOString(),
+        ...(coveredMonth ? { coveredMonth } : {}),
         ...snapshot,
         status: price.amount === 0 ? 'pending_gateway' : method === 'bank_slip' ? 'pending_slip' : 'pending_gateway',
         gateway: price.amount === 0 ? 'manual' : method,

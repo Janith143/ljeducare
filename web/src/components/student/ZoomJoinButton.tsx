@@ -20,10 +20,19 @@ export default function ZoomJoinButton({ classId }: { classId: string }) {
             );
             window.open(joinUrl, '_blank', 'noopener');
         } catch (e: unknown) {
-            setError((e as Error)?.message ?? 'Could not get your join link.');
+            const msg = (e as Error)?.message ?? 'Could not get your join link.';
+            setError(msg.includes('RENEW_REQUIRED') ? 'renew' : msg);
         } finally {
             setBusy(false);
         }
+    }
+
+    if (error === 'renew') {
+        return (
+            <a href={`/checkout/class/${classId}`} className="btn-primary">
+                Renew to join
+            </a>
+        );
     }
 
     return (

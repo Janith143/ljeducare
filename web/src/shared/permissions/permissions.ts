@@ -19,6 +19,7 @@ export type Permission =
     | 'students'         // student lookup by mobile
     | 'exams'
     | 'certificates'
+    | 'communications'   // bulk announcements to students (in-app/email/SMS/push)
     | 'settings'         // currencies/rates, gateways, integrations, kiosk devices
     | 'activity_logs'
     | 'data_privacy'
@@ -38,6 +39,7 @@ export const ALL_PERMISSIONS: Permission[] = [
     'students',
     'exams',
     'certificates',
+    'communications',
     'settings',
     'activity_logs',
     'data_privacy',
@@ -60,6 +62,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
         'students',
         'exams',
         'certificates',
+        'communications',
         'activity_logs',
         'recycle_bin',
     ],

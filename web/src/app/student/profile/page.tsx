@@ -1,6 +1,7 @@
 import type { User } from '@ljeducare/shared';
 import { COLLECTIONS } from '@ljeducare/shared';
 import StudentProfileForm from '@/components/student/StudentProfileForm';
+import PushToggle from '@/components/student/PushToggle';
 import SignOutButton from '@/components/layout/SignOutButton';
 import { requireRole } from '@/lib/auth/session';
 import { getCurrencySettings } from '@/lib/data/currencies';
@@ -37,6 +38,7 @@ export default async function StudentProfilePage() {
                 }}
                 currencies={currencies.enabled}
             />
+            <PushToggle uid={user.uid} />
         </div>
     );
 }

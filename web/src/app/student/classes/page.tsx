@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { LiveClass } from '@ljeducare/shared';
 import { COLLECTIONS } from '@ljeducare/shared';
 import ZoomJoinButton from '@/components/student/ZoomJoinButton';
+import HomeworkSubmitForm from '@/components/student/HomeworkSubmitForm';
 import { requireRole } from '@/lib/auth/session';
 import { adminDb } from '@/lib/firebase/admin';
 
@@ -39,6 +40,9 @@ export default async function StudentClassesPage() {
                                             {cls.subject} ·{' '}
                                             {cls.recurrence === 'weekly' ? 'Weekly' : cls.date} · {cls.startTime}–{cls.endTime}
                                         </p>
+                                        <div className="mt-1">
+                                            <HomeworkSubmitForm classId={cls.id} />
+                                        </div>
                                     </div>
                                     {cls.meetProvider === 'zoom' && cls.zoomMeetingId ? (
                                         <ZoomJoinButton classId={cls.id} />

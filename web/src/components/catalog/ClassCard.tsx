@@ -31,6 +31,11 @@ export default function ClassCard({
             <p className="text-sm text-light-subtle dark:text-dark-subtle">
                 {cls.recurrence === 'weekly' ? `Weekly · ${cls.startTime}–${cls.endTime}` : `${cls.date} · ${cls.startTime}–${cls.endTime}`}
             </p>
+            {cls.category && (
+                <span className="w-fit rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                    {cls.category}
+                </span>
+            )}
             <div className="mt-auto flex items-center justify-between pt-2">
                 {cls.hidePrice ? <span /> : <PriceTag pricing={cls.pricing} settings={settings} />}
                 <span className="text-sm font-medium text-primary">View class →</span>

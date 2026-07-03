@@ -19,7 +19,7 @@ export default async function StudentLayout({ children }: { children: React.Reac
     const user = await requireRole('student');
     return (
         <AuthProvider user={user}>
-            <DashboardShell title="Student" nav={NAV} userName={user.name ?? user.email ?? ''} roleLabel="Student">
+            <DashboardShell title="Student" nav={NAV} userName={user.name ?? user.email ?? ''} roleLabel="Student" uid={user.uid}>
                 {children}
             </DashboardShell>
         </AuthProvider>

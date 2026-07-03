@@ -30,6 +30,7 @@ export default function QuizForm({ existing }: { existing?: Quiz }) {
             usdOverride: f.get('usdOverride') ? Number(f.get('usdOverride')) : null,
             medium: String(f.get('medium') ?? ''),
             grade: String(f.get('grade') ?? ''),
+            category: String(f.get('category') ?? ''),
             questions,
         };
         startTransition(async () => {
@@ -58,6 +59,7 @@ export default function QuizForm({ existing }: { existing?: Quiz }) {
                     <input name="medium" placeholder="Medium" defaultValue={existing?.medium} className="input" />
                     <input name="grade" placeholder="Grade" defaultValue={existing?.grade} className="input" />
                 </div>
+                <input name="category" placeholder="Category (optional)" defaultValue={existing?.category} className="input" />
                 <textarea name="description" rows={3} placeholder="Description" defaultValue={existing?.description} className="input" />
                 <div className="grid grid-cols-3 gap-3">
                     <label className="block text-sm">

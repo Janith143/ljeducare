@@ -24,6 +24,7 @@ export interface ClassFormInput {
     weeklyPaymentOption?: 'per_session' | 'per_month';
     medium?: string;
     grade?: string;
+    category?: string;
     joiningLink?: string;
     recordingMaxViews?: number;
     recordingExpiryDays?: number;
@@ -90,6 +91,7 @@ export async function saveClassAction(input: ClassFormInput) {
                 : {}),
             medium: input.medium?.trim() || '',
             grade: input.grade?.trim() || '',
+            category: input.category?.trim() || '',
             joiningLink: input.joiningLink?.trim() || '',
             recordingMaxViews: Math.max(0, Number(input.recordingMaxViews) || 0),
             recordingExpiryDays: [0, 14, 30, 60].includes(Number(input.recordingExpiryDays))

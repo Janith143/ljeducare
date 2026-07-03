@@ -91,6 +91,11 @@ service cloud.firestore {
     }
     match /kiosk_devices/{id} { allow read: if hasPerm('settings'); allow write: if false; }
     match /loginEvents/{id} { allow read: if isMainAdmin(); allow write: if false; }
+    // Device sessions — a user may read their own to detect being kicked; writes server-only.
+    match /userSessions/{id} {
+      allow read: if isAuthed() && resource.data.uid == request.auth.uid;
+      allow write: if false;
+    }
     match /activity_logs/{id} {
       allow read: if hasPerm('activity_logs');
       allow create: if isAuthed();
@@ -106,11 +111,14 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // Per-recipient notifications: read your own; mark-as-read is the only client write.
     match /notifications/{id} {
-      allow read: if isAuthed();
-      allow create: if isStaffRole();
-      allow delete: if isAdminArea();
-      allow update: if false;
+      allow read: if isAdminArea()
+        || (isAuthed() && resource.data.recipientId == request.auth.uid);
+      allow update: if isAuthed()
+        && resource.data.recipientId == request.auth.uid
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create, delete: if false; // server-only (Admin SDK)
     }
 
     // settings/* — currencies & site config readable; writes main_admin only

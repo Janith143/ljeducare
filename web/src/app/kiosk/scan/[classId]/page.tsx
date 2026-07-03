@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { LiveClass } from '@ljeducare/shared';
 import { COLLECTIONS } from '@ljeducare/shared';
 import KioskScanClient from '@/components/kiosk/KioskScanClient';
+import KioskBulkUpload from '@/components/kiosk/KioskBulkUpload';
 import { requireRole } from '@/lib/auth/session';
 import { adminDb } from '@/lib/firebase/admin';
 
@@ -41,6 +42,7 @@ export default async function KioskScanClassPage({
                         : `Fee: LKR ${cls.pricing.basePrice.toLocaleString()}`
                 }
             />
+            <KioskBulkUpload classId={cls.id} />
         </div>
     );
 }

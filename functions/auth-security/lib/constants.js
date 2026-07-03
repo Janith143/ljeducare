@@ -8,7 +8,7 @@ const ROLES = ['main_admin', 'manager', 'teacher_admin', 'teacher', 'student', '
 const ALL_PERMISSIONS = [
     'analytics', 'users', 'staff', 'content', 'classes', 'courses', 'sales',
     'revenue', 'attendance', 'requests', 'students', 'exams', 'certificates',
-    'settings', 'activity_logs', 'data_privacy', 'recycle_bin',
+    'communications', 'settings', 'activity_logs', 'data_privacy', 'recycle_bin',
 ];
 
 /** Permissions only main_admin may hold, even via delegation. */

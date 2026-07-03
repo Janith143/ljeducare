@@ -3,6 +3,8 @@ import type { LiveClass, StaffMember } from '@ljeducare/shared';
 import { COLLECTIONS } from '@ljeducare/shared';
 import ClassForm from '@/components/teacher/ClassForm';
 import ZoomMeetingManager from '@/components/teacher/ZoomMeetingManager';
+import HomeworkSubmissions from '@/components/teacher/HomeworkSubmissions';
+import type { User } from '@ljeducare/shared';
 import { requireRole } from '@/lib/auth/session';
 import { getOwnStaffProfile } from '@/lib/data/teacher';
 import { adminDb } from '@/lib/firebase/admin';
@@ -31,10 +33,27 @@ export default async function EditClassPage({
         ownerStaff = s.exists ? ({ ...(s.data() as StaffMember), id: s.id }) : null;
     }
 
+    // Resolve student names for any homework submissions.
+    const submissions = (cls.homeworkSubmissions ?? {}) as Record<string, { studentId: string; link: string; submittedAt: string }[]>;
+    const studentIds = [...new Set(Object.values(submissions).flat().map((s) => s.studentId))];
+    const studentNames: Record<string, string> = {};
+    if (studentIds.length) {
+        const docs = await Promise.all(
+            studentIds.map((sid) => adminDb().collection(COLLECTIONS.USERS).doc(sid).get()),
+        );
+        docs.forEach((d) => {
+            if (d.exists) {
+                const u = d.data() as User;
+                studentNames[d.id] = `${u.firstName ?? ''} ${u.lastName ?? ''}`.trim() || d.id;
+            }
+        });
+    }
+
     return (
         <div className="mx-auto max-w-2xl space-y-6">
             <h1 className="text-2xl font-bold">Edit class</h1>
             <ClassForm existing={cls} />
+            <HomeworkSubmissions submissions={submissions} studentNames={studentNames} />
             <ZoomMeetingManager
                 info={{
                     classId: cls.id,

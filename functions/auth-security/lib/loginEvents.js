@@ -8,22 +8,47 @@ const admin = require('firebase-admin');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const { audit, requireRole } = require('./util');
 
-/** Client calls right after sign-in: register the session/device. */
+// Max concurrent devices per user; when exceeded, the oldest session is kicked.
+const MAX_DEVICES = Number(process.env.MAX_LOGIN_DEVICES) || 3;
+
+/**
+ * Client calls right after sign-in: register this device's session, log the
+ * event, and enforce the device cap by deactivating the oldest sessions.
+ * The client polls userSessions/{uid}_{deviceId}.active and signs out if kicked.
+ */
 const recordLoginEvent = onCall(async (request) => {
     const uid = request.auth?.uid;
     if (!uid) throw new HttpsError('unauthenticated', 'Sign-in required');
 
     const { deviceId, userAgent, app } = request.data || {};
     if (!deviceId) throw new HttpsError('invalid-argument', 'deviceId is required');
+    const device = String(deviceId).slice(0, 200);
 
-    await getFirestore().collection('loginEvents').add({
+    const db = getFirestore();
+    await db.collection('loginEvents').add({
         uid,
-        deviceId: String(deviceId).slice(0, 200),
+        deviceId: device,
         userAgent: userAgent ? String(userAgent).slice(0, 500) : null,
         app: app || 'web',
         createdAt: FieldValue.serverTimestamp(),
     });
-    return { success: true };
+
+    // Upsert this device's session (id = uid_device so a re-login reuses it).
+    const now = new Date().toISOString();
+    await db.doc(`userSessions/${uid}_${device}`).set(
+        { uid, deviceId: device, active: true, userAgent: userAgent || null, lastSeen: now },
+        { merge: true },
+    );
+
+    // Enforce the cap: keep the newest MAX_DEVICES active, deactivate the rest.
+    const activeSnap = await db.collection('userSessions').where('uid', '==', uid).where('active', '==', true).get();
+    if (activeSnap.size > MAX_DEVICES) {
+        const sorted = activeSnap.docs.sort((a, b) => (b.data().lastSeen || '').localeCompare(a.data().lastSeen || ''));
+        const batch = db.batch();
+        sorted.slice(MAX_DEVICES).forEach((d) => batch.update(d.ref, { active: false, kickedAt: now }));
+        await batch.commit();
+    }
+    return { success: true, maxDevices: MAX_DEVICES };
 });
 
 /** Bump tokenVersion claim + revoke refresh tokens (self, or any user for main_admin). */

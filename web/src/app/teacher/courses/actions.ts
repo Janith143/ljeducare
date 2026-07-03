@@ -17,6 +17,7 @@ export interface CourseFormInput {
     isFree: boolean;
     medium?: string;
     grade?: string;
+    category?: string;
     lectures: {
         id?: string;
         title: string;
@@ -83,6 +84,7 @@ export async function saveCourseAction(input: CourseFormInput) {
             lectures,
             medium: input.medium?.trim() || '',
             grade: input.grade?.trim() || '',
+            category: input.category?.trim() || '',
         };
 
         if (existing) {

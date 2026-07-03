@@ -22,6 +22,7 @@ export default async function TeacherLayout({ children }: { children: React.Reac
                 nav={NAV}
                 userName={user.name ?? user.email ?? ''}
                 roleLabel={user.role === 'teacher_admin' ? 'Teacher Admin' : 'Teacher'}
+                uid={user.uid}
             >
                 {children}
             </DashboardShell>

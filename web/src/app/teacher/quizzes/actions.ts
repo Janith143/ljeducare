@@ -20,6 +20,7 @@ export interface QuizFormInput {
     isFree: boolean;
     medium?: string;
     grade?: string;
+    category?: string;
     questions: Question[];
 }
 
@@ -81,6 +82,7 @@ export async function saveQuizAction(input: QuizFormInput) {
             questions: input.questions,
             medium: input.medium?.trim() || '',
             grade: input.grade?.trim() || '',
+            category: input.category?.trim() || '',
         };
 
         if (existing) {

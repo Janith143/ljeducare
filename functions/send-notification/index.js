@@ -61,3 +61,6 @@ exports.deliverOutboxMessage = onDocumentCreated(
         }
     },
 );
+
+const { sendBulkMessage } = require("./lib/bulk");
+exports.sendBulkMessage = sendBulkMessage;

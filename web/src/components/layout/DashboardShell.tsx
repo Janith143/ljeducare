@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { SITE } from '@/lib/site';
 import SignOutButton from '@/components/layout/SignOutButton';
+import NotificationBell from '@/components/layout/NotificationBell';
+import SessionGuard from '@/components/layout/SessionGuard';
 
 export interface NavItem {
     href: string;
@@ -16,16 +18,19 @@ export default function DashboardShell({
     nav,
     userName,
     roleLabel,
+    uid,
     children,
 }: {
     title: string;
     nav: NavItem[];
     userName: string;
     roleLabel: string;
+    uid?: string;
     children: React.ReactNode;
 }) {
     return (
         <div className="flex min-h-screen flex-col">
+            {uid && <SessionGuard uid={uid} />}
             <header className="sticky top-0 z-40 border-b border-light-border bg-light-surface dark:border-dark-border dark:bg-dark-surface">
                 <div className="flex h-14 items-center justify-between gap-4 px-4">
                     <div className="flex items-center gap-3">
@@ -43,6 +48,7 @@ export default function DashboardShell({
                         <span className="hidden text-light-subtle dark:text-dark-subtle sm:inline">
                             {userName} · {roleLabel}
                         </span>
+                        {uid && <NotificationBell uid={uid} />}
                         <SignOutButton />
                     </div>
                 </div>
