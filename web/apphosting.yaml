@@ -31,11 +31,9 @@ env:
     value: LJ Educare
   - variable: NEXT_PUBLIC_DEFAULT_CURRENCY
     value: LKR
-  # UPDATE this to your live backend URL after the first rollout
-  # (Firebase console → App Hosting shows it, e.g. https://ljeducare--ljeducare.<region>.hosted.app),
-  # or your custom domain once connected.
+  # Live App Hosting URL (swap for your custom domain once connected).
   - variable: NEXT_PUBLIC_SITE_URL
-    value: https://ljeducare.web.app
+    value: https://ljeducare--ljeducare.asia-southeast1.hosted.app
 
   # ── Server-side secrets (Cloud Secret Manager). Create them first with:
   #      firebase apphosting:secrets:set AUTH_COOKIE_SIGNATURE_KEY_CURRENT
