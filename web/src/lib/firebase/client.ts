@@ -24,9 +24,29 @@ const firebaseConfig = {
 
 const useEmulators = !!process.env.NEXT_PUBLIC_USE_EMULATORS;
 let emulatorsConnected = false;
+let appCheckStarted = false;
+
+/**
+ * Firebase App Check (reCAPTCHA v3) — bot/abuse protection for Auth, Firestore,
+ * Storage and callable Functions. Activates only when a site key is configured
+ * (NEXT_PUBLIC_RECAPTCHA_SITE_KEY) and not under emulators, so it's a safe no-op
+ * until you register App Check in the console.
+ */
+async function ensureAppCheck(app: FirebaseApp) {
+    const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+    if (appCheckStarted || useEmulators || !siteKey || typeof window === 'undefined') return;
+    appCheckStarted = true;
+    const { initializeAppCheck, ReCaptchaV3Provider } = await import('firebase/app-check');
+    initializeAppCheck(app, {
+        provider: new ReCaptchaV3Provider(siteKey),
+        isTokenAutoRefreshEnabled: true,
+    });
+}
 
 export function getFirebaseApp(): FirebaseApp {
-    return getApps()[0] ?? initializeApp(firebaseConfig);
+    const app = getApps()[0] ?? initializeApp(firebaseConfig);
+    void ensureAppCheck(app);
+    return app;
 }
 
 export function getClientAuth(): Auth {

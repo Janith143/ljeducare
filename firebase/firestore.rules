@@ -78,7 +78,13 @@ service cloud.firestore {
     match /sales/{id} { allow read, write: if false; }
     match /financial_ledger/{id} { allow read, write: if false; }
     match /teacher_payments/{id} { allow read, write: if false; }
-    match /certificates/{id} { allow read: if isAuthed(); allow write: if false; }
+    // Certificates: public verification + the student's own list are served by the
+    // server (Admin SDK), so client reads are scoped to the owner / admins only.
+    match /certificates/{id} {
+      allow read: if isAdminArea()
+        || (isAuthed() && resource.data.studentId == request.auth.uid);
+      allow write: if false;
+    }
     match /submissions/{id} {
       allow read: if isStaffRole() || (isAuthed() && resource.data.studentId == request.auth.uid);
       allow write: if false; // written by functions
