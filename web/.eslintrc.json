@@ -1,0 +1,19 @@
+{
+  "extends": "next/core-web-vitals",
+  "rules": {
+    "max-lines": ["error", { "max": 600, "skipBlankLines": true, "skipComments": true }],
+    "no-restricted-syntax": [
+      "error",
+      {
+        "selector": "CallExpression[callee.property.name='toFixed']",
+        "message": "Use formatCurrency/formatCurrencyCompact from @ljeducare/shared for money display."
+      }
+    ]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.test.ts", "**/*.test.tsx"],
+      "rules": { "no-restricted-syntax": "off" }
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+# Firebase App Hosting configuration for the Next.js app in web/
+# Docs: https://firebase.google.com/docs/app-hosting/configure
+runConfig:
+  minInstances: 0
+  maxInstances: 4
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+
+# The Next.js app lives in the web/ workspace.
+# Set this repo's App Hosting backend "Root directory" to web/ in the console,
+# or keep this file at repo root and let the buildpack detect the workspace.
+
+env:
+  # Client (public) Firebase config — safe to expose
+  - variable: NEXT_PUBLIC_FIREBASE_API_KEY
+    secret: NEXT_PUBLIC_FIREBASE_API_KEY
+  - variable: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+    value: ljeducare-CHANGE_ME.firebaseapp.com
+  - variable: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+    value: ljeducare-CHANGE_ME
+  - variable: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+    value: ljeducare-CHANGE_ME.firebasestorage.app
+  - variable: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+    secret: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+  - variable: NEXT_PUBLIC_FIREBASE_APP_ID
+    secret: NEXT_PUBLIC_FIREBASE_APP_ID
+
+  # Server-side secrets (Cloud Secret Manager)
+  - variable: AUTH_COOKIE_SIGNATURE_KEY_CURRENT
+    secret: AUTH_COOKIE_SIGNATURE_KEY_CURRENT
+  - variable: AUTH_COOKIE_SIGNATURE_KEY_PREVIOUS
+    secret: AUTH_COOKIE_SIGNATURE_KEY_PREVIOUS
+  - variable: REVALIDATE_SECRET
+    secret: REVALIDATE_SECRET

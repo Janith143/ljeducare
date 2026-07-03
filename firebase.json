@@ -1,0 +1,34 @@
+{
+  "firestore": {
+    "rules": "firebase/firestore.rules",
+    "indexes": "firebase/firestore.indexes.json"
+  },
+  "storage": {
+    "rules": "firebase/storage.rules"
+  },
+  "functions": [
+    {
+      "codebase": "auth-security",
+      "source": "functions/auth-security",
+      "runtime": "nodejs22"
+    },
+    {
+      "codebase": "sale-handler",
+      "source": "functions/sale-handler",
+      "runtime": "nodejs22"
+    },
+    {
+      "codebase": "send-notification",
+      "source": "functions/send-notification",
+      "runtime": "nodejs22"
+    }
+  ],
+  "emulators": {
+    "auth": { "host": "0.0.0.0", "port": 9099 },
+    "firestore": { "host": "0.0.0.0", "port": 8080 },
+    "functions": { "host": "0.0.0.0", "port": 5001 },
+    "storage": { "host": "0.0.0.0", "port": 9199 },
+    "ui": { "enabled": true, "host": "0.0.0.0", "port": 4000 },
+    "singleProjectMode": true
+  }
+}

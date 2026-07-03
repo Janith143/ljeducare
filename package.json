@@ -1,0 +1,23 @@
+{
+  "name": "ljeducare",
+  "private": true,
+  "version": "0.1.0",
+  "description": "LJ Educare — private institute LMS (Next.js + Firebase)",
+  "workspaces": [
+    "web",
+    "packages/*",
+    "functions/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace web",
+    "build": "npm run build --workspace @ljeducare/shared && npm run build --workspace web",
+    "build:shared": "npm run build --workspace @ljeducare/shared",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "emulators": "firebase emulators:start",
+    "seed": "node scripts/seed-emulator.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

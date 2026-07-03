@@ -1,0 +1,18 @@
+# Run the Firebase Emulator Suite in Docker (see Dockerfile for why).
+#   docker compose -f dev/emulators/docker-compose.yml up -d
+services:
+  firebase-emulators:
+    build: .
+    container_name: lj-emulators
+    ports:
+      - "4000:4000"   # Emulator UI
+      - "5001:5001"   # Functions
+      - "8080:8080"   # Firestore
+      - "9099:9099"   # Auth
+      - "9199:9199"   # Storage
+    environment:
+      # node_modules over a Windows bind mount loads slowly — give discovery time.
+      - FUNCTIONS_DISCOVERY_TIMEOUT=120
+    volumes:
+      - ../..:/app
+    restart: unless-stopped

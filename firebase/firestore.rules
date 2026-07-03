@@ -1,0 +1,110 @@
+rules_version = '2';
+
+// LJ Educare — (default) database rules.
+// Authorization derives from SERVER-SET custom claims (auth-security function):
+//   role: main_admin | manager | teacher_admin | teacher | student | kiosk
+//   perms: delegated admin permission keys (manager / teacher_admin)
+// Financial collections are Admin-SDK-only (Cloud Functions bypass rules).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthed() { return request.auth != null; }
+    function role() { return isAuthed() ? request.auth.token.get('role', '') : ''; }
+    function isMainAdmin() { return role() == 'main_admin'; }
+    function isAdminArea() { return role() in ['main_admin', 'manager', 'teacher_admin']; }
+    function isStaffRole() { return role() in ['main_admin', 'manager', 'teacher_admin', 'teacher']; }
+    function hasPerm(p) {
+      return isMainAdmin()
+        || (isAdminArea() && p in request.auth.token.get('perms', []));
+    }
+    function isSelf(uid) { return isAuthed() && request.auth.uid == uid; }
+
+    // users/{uid} — profile docs. Role/permissions/enrollments are server-managed.
+    match /users/{uid} {
+      allow read: if isSelf(uid) || isAdminArea();
+      allow create: if isSelf(uid)
+        && request.resource.data.role == 'student'
+        && !('permissions' in request.resource.data)
+        && !('enrolledClassIds' in request.resource.data)
+        && !('enrolledCourseIds' in request.resource.data)
+        && !('enrolledQuizIds' in request.resource.data);
+      allow update: if (isSelf(uid) || hasPerm('users'))
+        && request.resource.data.role == resource.data.role
+        && request.resource.data.get('permissions', []) == resource.data.get('permissions', [])
+        && request.resource.data.get('enrolledClassIds', []) == resource.data.get('enrolledClassIds', [])
+        && request.resource.data.get('enrolledCourseIds', []) == resource.data.get('enrolledCourseIds', [])
+        && request.resource.data.get('enrolledQuizIds', []) == resource.data.get('enrolledQuizIds', []);
+      allow delete: if isMainAdmin();
+    }
+
+    // staff/{id} — teacher profiles. Money fields (commissionRate, manualBalance,
+    // totalEarned, lastReset) are staff-admin/server managed.
+    match /staff/{id} {
+      allow read: if true; // public bio pages
+      allow create, delete: if hasPerm('staff');
+      allow update: if hasPerm('staff')
+        || (isStaffRole()
+            && resource.data.userId == request.auth.uid
+            && request.resource.data.commissionRate == resource.data.commissionRate
+            && request.resource.data.get('manualBalance', 0) == resource.data.get('manualBalance', 0)
+            && request.resource.data.get('totalEarned', 0) == resource.data.get('totalEarned', 0));
+    }
+
+    // Content — publicly readable when published; writes for owning teacher or admins.
+    match /classes/{id} {
+      allow read: if resource.data.isPublished == true || isStaffRole() || role() == 'kiosk';
+      allow create, update: if isStaffRole();
+      allow delete: if hasPerm('classes');
+    }
+    match /courses/{id} {
+      allow read: if resource.data.isPublished == true || isStaffRole();
+      allow create, update: if isStaffRole();
+      allow delete: if hasPerm('courses');
+    }
+    match /quizzes/{id} {
+      allow read: if resource.data.isPublished == true || isStaffRole();
+      allow create, update: if isStaffRole();
+      allow delete: if hasPerm('content');
+    }
+
+    // Financial + credential collections — server-only (Admin SDK).
+    match /sales/{id} { allow read, write: if false; }
+    match /financial_ledger/{id} { allow read, write: if false; }
+    match /teacher_payments/{id} { allow read, write: if false; }
+    match /certificates/{id} { allow read: if isAuthed(); allow write: if false; }
+    match /submissions/{id} {
+      allow read: if isStaffRole() || (isAuthed() && resource.data.studentId == request.auth.uid);
+      allow write: if false; // written by functions
+    }
+    match /kiosk_devices/{id} { allow read: if hasPerm('settings'); allow write: if false; }
+    match /loginEvents/{id} { allow read: if isMainAdmin(); allow write: if false; }
+    match /activity_logs/{id} {
+      allow read: if hasPerm('activity_logs');
+      allow create: if isAuthed();
+      allow update, delete: if false;
+    }
+
+    // Requests students create; server/admin advance the status.
+    match /customClassRequests/{id} {
+      allow read: if isAdminArea() || isStaffRole()
+        || (isAuthed() && resource.data.studentId == request.auth.uid);
+      allow create: if isAuthed() && request.resource.data.studentId == request.auth.uid
+        && request.resource.data.status == 'pending';
+      allow update, delete: if false;
+    }
+
+    match /notifications/{id} {
+      allow read: if isAuthed();
+      allow create: if isStaffRole();
+      allow delete: if isAdminArea();
+      allow update: if false;
+    }
+
+    // settings/* — currencies & site config readable; writes main_admin only
+    // (gateway secrets live in function secrets, not here).
+    match /settings/{doc} {
+      allow read: if true;
+      allow write: if isMainAdmin();
+    }
+  }
+}
