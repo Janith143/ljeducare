@@ -18,3 +18,6 @@ npm test             # money-util unit tests (vitest)
 ```
 
 See the repository root `SETUP.md` for full provisioning and deploy steps.
+
+<!-- Deployed on Firebase App Hosting (asia-southeast1). -->
+
