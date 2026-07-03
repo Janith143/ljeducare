@@ -14,3 +14,4 @@ pubsub-debug.log
 emulator-data/
 service-account*.json
 .DS_Store
+/package-lock.json
