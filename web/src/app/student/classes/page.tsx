@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import type { LiveClass } from '@ljeducare/shared';
 import { COLLECTIONS } from '@ljeducare/shared';
+import ZoomJoinButton from '@/components/student/ZoomJoinButton';
 import { requireRole } from '@/lib/auth/session';
 import { adminDb } from '@/lib/firebase/admin';
 
@@ -39,7 +40,9 @@ export default async function StudentClassesPage() {
                                             {cls.recurrence === 'weekly' ? 'Weekly' : cls.date} · {cls.startTime}–{cls.endTime}
                                         </p>
                                     </div>
-                                    {cls.joiningLink ? (
+                                    {cls.meetProvider === 'zoom' && cls.zoomMeetingId ? (
+                                        <ZoomJoinButton classId={cls.id} />
+                                    ) : cls.joiningLink ? (
                                         <a href={cls.joiningLink} target="_blank" rel="noreferrer" className="btn-primary">
                                             Join Now ↗
                                         </a>

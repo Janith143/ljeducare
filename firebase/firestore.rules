@@ -48,7 +48,14 @@ service cloud.firestore {
             && request.resource.data.commissionRate == resource.data.commissionRate
             && request.resource.data.get('manualBalance', 0) == resource.data.get('manualBalance', 0)
             && request.resource.data.get('totalEarned', 0) == resource.data.get('totalEarned', 0));
+
+      // Zoom tokens/secrets — server-only (Admin SDK). Never client-readable.
+      match /private/{doc} { allow read, write: if false; }
     }
+
+    // Zoom session tracking + OAuth state — server-only (Admin SDK).
+    match /zoom_sessions/{id} { allow read, write: if false; }
+    match /zoom_oauth_state/{id} { allow read, write: if false; }
 
     // Content — publicly readable when published; writes for owning teacher or admins.
     match /classes/{id} {

@@ -5,7 +5,7 @@ import type { LiveClass } from '@ljeducare/shared';
 import { COLLECTIONS } from '@ljeducare/shared';
 import { requireRole } from '@/lib/auth/session';
 import { adminDb } from '@/lib/firebase/admin';
-import { toEmbed } from '@/lib/videoEmbed';
+import SecureVideoPlayer from '@/components/player/SecureVideoPlayer';
 
 export const dynamic = 'force-dynamic';
 
@@ -59,6 +59,7 @@ export default async function RecordingWatchPage({
     }
     await userDoc.ref.update({ [`recordingViews.${viewKey}`]: FieldValue.increment(1) });
     const viewsLeft = maxViews > 0 ? maxViews - used - 1 : null;
+    const watermark = `${user.name ?? user.email ?? 'Student'} · ${user.uid.slice(0, 8)}`;
 
     return (
         <div className="min-h-screen bg-black text-white">
@@ -76,34 +77,15 @@ export default async function RecordingWatchPage({
             </header>
             <main className="mx-auto max-w-5xl space-y-6 p-4">
                 {urls.map((url, i) => (
-                    <Player key={url} url={url} label={urls.length > 1 ? `Part ${i + 1}` : null} />
+                    <div key={url} className="space-y-1">
+                        {urls.length > 1 && <p className="text-sm text-slate-300">Part {i + 1}</p>}
+                        <SecureVideoPlayer url={url} watermark={watermark} title={cls.title} />
+                    </div>
                 ))}
+                <p className="text-center text-xs text-slate-500">
+                    This recording is licensed to {watermark}. Do not record or share it.
+                </p>
             </main>
-        </div>
-    );
-}
-
-function Player({ url, label }: { url: string; label: string | null }) {
-    const embed = toEmbed(url);
-    return (
-        <div className="space-y-1">
-            {label && <p className="text-sm text-slate-300">{label}</p>}
-            {embed.kind === 'youtube' ? (
-                <iframe
-                    src={embed.src}
-                    className="aspect-video w-full rounded-xl"
-                    allow="accelerometer; autoplay; encrypted-media; picture-in-picture"
-                    allowFullScreen
-                    title={label ?? 'Recording'}
-                />
-            ) : embed.kind === 'video' ? (
-                // eslint-disable-next-line jsx-a11y/media-has-caption
-                <video src={embed.src} controls className="aspect-video w-full rounded-xl bg-black" />
-            ) : (
-                <a href={embed.src} target="_blank" rel="noreferrer" className="text-primary underline">
-                    Open recording ↗
-                </a>
-            )}
         </div>
     );
 }

@@ -21,6 +21,11 @@
       "codebase": "send-notification",
       "source": "functions/send-notification",
       "runtime": "nodejs22"
+    },
+    {
+      "codebase": "zoom-handler",
+      "source": "functions/zoom-handler",
+      "runtime": "nodejs22"
     }
   ],
   "emulators": {
