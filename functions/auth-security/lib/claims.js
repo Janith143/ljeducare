@@ -23,6 +23,7 @@ const syncRoleClaims = onDocumentWritten('users/{uid}', async (event) => {
         before &&
         before.role === after.role &&
         before.id === after.id &&
+        before.studentId === after.studentId &&
         before.staffId === after.staffId &&
         arraysEqual(before.permissions, after.permissions)
     ) {
@@ -33,11 +34,14 @@ const syncRoleClaims = onDocumentWritten('users/{uid}', async (event) => {
         const user = await admin.auth().getUser(uid);
         const existing = user.customClaims || {};
         const bizId = typeof after.id === 'string' ? after.id : null;
+        // Students carry their business id (LJE####XX) via `studentId`; fall back to
+        // `id` for legacy docs created before studentId assignment existed.
+        const studentBizId = typeof after.studentId === 'string' ? after.studentId : bizId;
 
         const desired = {
             ...existing,
             role: after.role,
-            sid: after.role === 'student' ? bizId : null,
+            sid: after.role === 'student' ? studentBizId : null,
             tid: after.role === 'teacher' || after.role === 'teacher_admin'
                 ? (after.staffId || bizId)
                 : null,

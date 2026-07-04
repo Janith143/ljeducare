@@ -38,10 +38,15 @@ env:
   # ── Server-side secrets (Cloud Secret Manager). Create them first with:
   #      firebase apphosting:secrets:set AUTH_COOKIE_SIGNATURE_KEY_CURRENT
   #      firebase apphosting:secrets:set AUTH_COOKIE_SIGNATURE_KEY_PREVIOUS
-  #      firebase apphosting:secrets:set REVALIDATE_SECRET ──
+  #      firebase apphosting:secrets:set REVALIDATE_SECRET
+  #      firebase apphosting:secrets:set PORTAL_BRIDGE_SECRET ──
   - variable: AUTH_COOKIE_SIGNATURE_KEY_CURRENT
     secret: AUTH_COOKIE_SIGNATURE_KEY_CURRENT
   - variable: AUTH_COOKIE_SIGNATURE_KEY_PREVIOUS
     secret: AUTH_COOKIE_SIGNATURE_KEY_PREVIOUS
   - variable: REVALIDATE_SECRET
     secret: REVALIDATE_SECRET
+  # Shared HMAC secret for the cross-app connector API (same value set on the
+  # studentportal hub). Signs /api/connector/* requests.
+  - variable: PORTAL_BRIDGE_SECRET
+    secret: PORTAL_BRIDGE_SECRET

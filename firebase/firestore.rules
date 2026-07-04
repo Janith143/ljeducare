@@ -91,6 +91,9 @@ service cloud.firestore {
     }
     match /kiosk_devices/{id} { allow read: if hasPerm('settings'); allow write: if false; }
     match /loginEvents/{id} { allow read: if isMainAdmin(); allow write: if false; }
+    // Cross-app connector: link tokens + rate-limit counters — server-only (Admin SDK).
+    match /accountLinks/{id} { allow read, write: if false; }
+    match /connector_rate_limits/{id} { allow read, write: if false; }
     // Device sessions — a user may read their own to detect being kicked; writes server-only.
     match /userSessions/{id} {
       allow read: if isAuthed() && resource.data.uid == request.auth.uid;
