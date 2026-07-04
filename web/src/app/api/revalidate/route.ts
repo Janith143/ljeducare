@@ -1,7 +1,7 @@
 import { revalidateTag } from 'next/cache';
 import { NextRequest, NextResponse } from 'next/server';
 
-const VALID_TAGS = ['classes', 'courses', 'quizzes', 'teachers', 'currencies'];
+const VALID_TAGS = ['classes', 'courses', 'quizzes', 'teachers', 'currencies', 'categories'];
 
 /**
  * On-demand ISR revalidation, called by the database-triggers function

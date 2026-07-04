@@ -4,7 +4,7 @@ import ProductCard from '@/components/catalog/ProductCard';
 import { contentForCategory, getCategory, teachersForCategory } from '@/lib/data/categories';
 import { getCurrencySettings } from '@/lib/data/currencies';
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
     const { slug } = await params;

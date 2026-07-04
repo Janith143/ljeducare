@@ -3,7 +3,7 @@ import CategoryCard from '@/components/catalog/CategoryCard';
 import { listCategories } from '@/lib/data/categories';
 import { listPublishedClasses, listPublishedCourses, listPublishedQuizzes } from '@/lib/data/catalog';
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 export const metadata = { title: 'Browse categories' };
 

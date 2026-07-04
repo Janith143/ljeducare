@@ -11,7 +11,10 @@ import {
 import { getHomepageSettings, listCategories, teachersForCategory } from '@/lib/data/categories';
 import { SITE } from '@/lib/site';
 
-export const revalidate = 300;
+// Dynamic: the institute portal must reflect admin category/content changes
+// immediately (App Hosting runs multiple instances, so per-instance ISR caches
+// diverge and on-demand revalidation only reaches one instance).
+export const dynamic = 'force-dynamic';
 
 const inCategory = (item: { categorySlug?: string; category?: string }, cat: Category) =>
     item.categorySlug ? item.categorySlug === cat.slug : item.category === cat.name || item.category === cat.slug;
