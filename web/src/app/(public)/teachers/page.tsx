@@ -1,16 +1,21 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import CategoryFilterBar from '@/components/catalog/CategoryFilterBar';
 import { listPublishedTeachers } from '@/lib/data/catalog';
+import { listCategories, teachersForCategory } from '@/lib/data/categories';
 
-export const revalidate = 300;
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
     title: 'Our Teachers',
     description: 'Meet the teachers of our institute.',
 };
 
-export default async function TeachersPage() {
-    const teachers = await listPublishedTeachers();
+export default async function TeachersPage({ searchParams }: { searchParams: Promise<{ cat?: string }> }) {
+    const { cat } = await searchParams;
+    const [allTeachers, categories] = await Promise.all([listPublishedTeachers(), listCategories()]);
+    const activeCat = categories.find((c) => c.slug === cat) ?? null;
+    const teachers = activeCat ? await teachersForCategory(activeCat) : allTeachers;
 
     return (
         <div className="mx-auto max-w-7xl space-y-6 px-4 py-10">
@@ -20,6 +25,8 @@ export default async function TeachersPage() {
                     Experienced educators guiding every class, course and exam.
                 </p>
             </header>
+
+            <CategoryFilterBar categories={categories} active={cat} basePath="/teachers" />
 
             {teachers.length ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">

@@ -2,18 +2,27 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { CurrencySettings, Quiz } from '@ljeducare/shared';
 import PriceTag from '@/components/catalog/PriceTag';
+import CategoryFilterBar from '@/components/catalog/CategoryFilterBar';
 import { listPublishedQuizzes } from '@/lib/data/catalog';
 import { getCurrencySettings } from '@/lib/data/currencies';
+import { itemInCategory, listCategories } from '@/lib/data/categories';
 
-export const revalidate = 60;
+export const dynamic = 'force-dynamic';
 
 export const metadata: Metadata = {
     title: 'Quizzes',
     description: 'Practice with scheduled online quizzes.',
 };
 
-export default async function QuizzesPage() {
-    const [quizzes, settings] = await Promise.all([listPublishedQuizzes(), getCurrencySettings()]);
+export default async function QuizzesPage({ searchParams }: { searchParams: Promise<{ cat?: string }> }) {
+    const { cat } = await searchParams;
+    const [quizzes, settings, categories] = await Promise.all([
+        listPublishedQuizzes(),
+        getCurrencySettings(),
+        listCategories(),
+    ]);
+    const activeCat = categories.find((c) => c.slug === cat) ?? null;
+    const filtered = activeCat ? quizzes.filter((q) => itemInCategory(q, activeCat)) : quizzes;
 
     return (
         <div className="mx-auto max-w-7xl space-y-6 px-4 py-10">
@@ -24,15 +33,17 @@ export default async function QuizzesPage() {
                 </p>
             </header>
 
-            {quizzes.length ? (
+            <CategoryFilterBar categories={categories} active={cat} basePath="/quizzes" />
+
+            {filtered.length ? (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                    {quizzes.map((quiz) => (
+                    {filtered.map((quiz) => (
                         <QuizCard key={quiz.id} quiz={quiz} settings={settings} />
                     ))}
                 </div>
             ) : (
                 <p className="card text-light-subtle dark:text-dark-subtle">
-                    No scheduled quizzes right now — check back soon.
+                    No quizzes in this category yet — try another.
                 </p>
             )}
         </div>

@@ -28,11 +28,12 @@ export async function getHomepageSettings(): Promise<HomepageSettings> {
 }
 
 /** A content item matches a category by its stored slug (preferred) or legacy name. */
-function matches(item: { categorySlug?: string; category?: string }, cat: Category): boolean {
+export function itemInCategory(item: { categorySlug?: string; category?: string }, cat: Category): boolean {
     if (item.categorySlug) return item.categorySlug === cat.slug;
     if (item.category) return item.category === cat.name || item.category === cat.slug;
     return false;
 }
+const matches = itemInCategory;
 
 /** Distinct published teachers who have content in this category — pinned ones first. */
 export async function teachersForCategory(cat: Category): Promise<StaffMember[]> {
