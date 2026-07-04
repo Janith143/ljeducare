@@ -4,11 +4,12 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Course } from '@ljeducare/shared';
 import { saveCourseAction, type CourseFormInput } from '@/app/teacher/courses/actions';
+import CategorySelect, { type CategoryOpt } from '@/components/teacher/CategorySelect';
 
 type LectureRow = CourseFormInput['lectures'][number] & { key: string };
 
 /** Create/edit form for a recorded course with an inline lessons editor. */
-export default function CourseForm({ existing }: { existing?: Course }) {
+export default function CourseForm({ existing, categories = [] }: { existing?: Course; categories?: CategoryOpt[] }) {
     const router = useRouter();
     const [pending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
@@ -41,7 +42,8 @@ export default function CourseForm({ existing }: { existing?: Course }) {
             usdOverride: f.get('usdOverride') ? Number(f.get('usdOverride')) : null,
             medium: String(f.get('medium') ?? ''),
             grade: String(f.get('grade') ?? ''),
-            category: String(f.get('category') ?? ''),
+            categorySlug: String(f.get('categorySlug') ?? ''),
+            category: categories.find((c) => c.slug === String(f.get('categorySlug') ?? ''))?.name ?? '',
             lectures: lectures.map(({ key, ...l }) => (void key, l)),
         };
         startTransition(async () => {
@@ -70,7 +72,7 @@ export default function CourseForm({ existing }: { existing?: Course }) {
                     <input name="medium" placeholder="Medium" defaultValue={existing?.medium} className="input" />
                     <input name="grade" placeholder="Grade" defaultValue={existing?.grade} className="input" />
                 </div>
-                <input name="category" placeholder="Category (optional)" defaultValue={existing?.category} className="input" />
+                <CategorySelect categories={categories} defaultSlug={existing?.categorySlug} defaultName={existing?.category} />
                 <textarea name="description" rows={4} placeholder="Description" defaultValue={existing?.description} className="input" />
             </section>
 

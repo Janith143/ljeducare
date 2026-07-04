@@ -16,13 +16,23 @@ export default function PaymentRedirectClient() {
         started.current = true;
 
         const saleId = searchParams.get('saleId');
-        if (!saleId) {
+        const orderId = searchParams.get('orderId');
+        if (!saleId && !orderId) {
             setMessage('Missing payment reference.');
             return;
         }
         (async () => {
+            if (orderId) {
+                try {
+                    await callFunction<{ orderId: string }, { success: boolean }>('paypalCaptureCartOrder', { orderId });
+                } catch {
+                    /* fall through — the order page shows the true status */
+                }
+                router.replace(`/payment/order/${orderId}`);
+                return;
+            }
             try {
-                await callFunction<{ saleId: string }, { success: boolean }>('paypalCaptureOrder', { saleId });
+                await callFunction<{ saleId: string }, { success: boolean }>('paypalCaptureOrder', { saleId: saleId! });
                 router.replace(`/payment/success/${saleId}`);
             } catch {
                 router.replace(`/payment/failed/${saleId}`);

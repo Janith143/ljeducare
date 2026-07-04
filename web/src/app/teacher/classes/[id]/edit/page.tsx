@@ -7,6 +7,7 @@ import HomeworkSubmissions from '@/components/teacher/HomeworkSubmissions';
 import type { User } from '@ljeducare/shared';
 import { requireRole } from '@/lib/auth/session';
 import { getOwnStaffProfile } from '@/lib/data/teacher';
+import { listCategories } from '@/lib/data/categories';
 import { adminDb } from '@/lib/firebase/admin';
 
 export const dynamic = 'force-dynamic';
@@ -49,10 +50,12 @@ export default async function EditClassPage({
         });
     }
 
+    const categories = (await listCategories()).map((c) => ({ slug: c.slug, name: c.name }));
+
     return (
         <div className="mx-auto max-w-2xl space-y-6">
             <h1 className="text-2xl font-bold">Edit class</h1>
-            <ClassForm existing={cls} />
+            <ClassForm existing={cls} categories={categories} />
             <HomeworkSubmissions submissions={submissions} studentNames={studentNames} />
             <ZoomMeetingManager
                 info={{

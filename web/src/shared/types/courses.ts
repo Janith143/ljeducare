@@ -59,7 +59,8 @@ export interface Course {
     isDeleted?: boolean;
     medium?: string;
     grade?: string;
-    category?: string;
+    category?: string;         // display name (legacy free-text)
+    categorySlug?: string;     // reference to categories/{slug}
     createdAt?: string;
 }
 

@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import type { Question, Quiz } from '@ljeducare/shared';
 import { saveQuizAction, type QuizFormInput } from '@/app/teacher/quizzes/actions';
 import QuizQuestionsEditor from './QuizQuestionsEditor';
+import CategorySelect, { type CategoryOpt } from '@/components/teacher/CategorySelect';
 
 /** Create/edit form for a timed quiz. */
-export default function QuizForm({ existing }: { existing?: Quiz }) {
+export default function QuizForm({ existing, categories = [] }: { existing?: Quiz; categories?: CategoryOpt[] }) {
     const router = useRouter();
     const [pending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
@@ -30,7 +31,8 @@ export default function QuizForm({ existing }: { existing?: Quiz }) {
             usdOverride: f.get('usdOverride') ? Number(f.get('usdOverride')) : null,
             medium: String(f.get('medium') ?? ''),
             grade: String(f.get('grade') ?? ''),
-            category: String(f.get('category') ?? ''),
+            categorySlug: String(f.get('categorySlug') ?? ''),
+            category: categories.find((c) => c.slug === String(f.get('categorySlug') ?? ''))?.name ?? '',
             questions,
         };
         startTransition(async () => {
@@ -59,7 +61,7 @@ export default function QuizForm({ existing }: { existing?: Quiz }) {
                     <input name="medium" placeholder="Medium" defaultValue={existing?.medium} className="input" />
                     <input name="grade" placeholder="Grade" defaultValue={existing?.grade} className="input" />
                 </div>
-                <input name="category" placeholder="Category (optional)" defaultValue={existing?.category} className="input" />
+                <CategorySelect categories={categories} defaultSlug={existing?.categorySlug} defaultName={existing?.category} />
                 <textarea name="description" rows={3} placeholder="Description" defaultValue={existing?.description} className="input" />
                 <div className="grid grid-cols-3 gap-3">
                     <label className="block text-sm">

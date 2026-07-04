@@ -9,6 +9,8 @@ export const COLLECTIONS = {
     COURSES: 'courses',
     QUIZZES: 'quizzes',
     SALES: 'sales',                          // server-only writes
+    ORDERS: 'orders',                        // cart checkout — server-only writes
+    CATEGORIES: 'categories',                // browse categories (admin-managed)
     FINANCIAL_LEDGER: 'financial_ledger',    // server-only writes
     TEACHER_PAYMENTS: 'teacher_payments',    // Pay & Reset settlement log, server-only writes
     SUBMISSIONS: 'submissions',              // quiz submissions
@@ -28,6 +30,7 @@ export const SETTINGS_DOCS = {
     GATEWAYS: 'gateways',
     SITE: 'site',
     KIOSK: 'kiosk',
+    HOMEPAGE: 'homepage',
 } as const;
 
 /** Storage path roots (mirrors storage.rules). */
@@ -37,4 +40,5 @@ export const STORAGE_PATHS = {
     COVER_IMAGES: 'cover-images',
     CERTIFICATES: 'certificates',
     SITE_ASSETS: 'site-assets',
+    CATEGORY_IMAGES: 'category-images',
 } as const;

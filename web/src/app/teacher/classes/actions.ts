@@ -25,6 +25,7 @@ export interface ClassFormInput {
     medium?: string;
     grade?: string;
     category?: string;
+    categorySlug?: string;
     joiningLink?: string;
     recordingMaxViews?: number;
     recordingExpiryDays?: number;
@@ -92,6 +93,7 @@ export async function saveClassAction(input: ClassFormInput) {
             medium: input.medium?.trim() || '',
             grade: input.grade?.trim() || '',
             category: input.category?.trim() || '',
+            categorySlug: input.categorySlug?.trim() || '',
             joiningLink: input.joiningLink?.trim() || '',
             recordingMaxViews: Math.max(0, Number(input.recordingMaxViews) || 0),
             recordingExpiryDays: [0, 14, 30, 60].includes(Number(input.recordingExpiryDays))

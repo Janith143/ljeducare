@@ -74,8 +74,16 @@ service cloud.firestore {
       allow delete: if hasPerm('content');
     }
 
+    // Browse categories — publicly readable when enabled; content admins manage them.
+    match /categories/{id} {
+      allow read: if resource.data.enabled == true || isStaffRole();
+      allow create, update, delete: if hasPerm('content');
+    }
+
     // Financial + credential collections — server-only (Admin SDK).
     match /sales/{id} { allow read, write: if false; }
+    // Cart orders — server-only (Admin SDK); finalize splits into per-item sales.
+    match /orders/{id} { allow read, write: if false; }
     match /financial_ledger/{id} { allow read, write: if false; }
     match /teacher_payments/{id} { allow read, write: if false; }
     // Certificates: public verification + the student's own list are served by the

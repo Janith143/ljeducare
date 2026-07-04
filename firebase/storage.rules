@@ -17,6 +17,10 @@ service firebase.storage {
       allow read: if true;
       allow write: if role() == 'main_admin';
     }
+    match /category-images/{file=**} {
+      allow read: if true;
+      allow write: if isAdminArea() && isImageUnder5MB();
+    }
     match /cover-images/{file=**} {
       allow read: if true;
       allow write: if isStaffRole() && isImageUnder5MB();

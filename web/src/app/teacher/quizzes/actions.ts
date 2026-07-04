@@ -21,6 +21,7 @@ export interface QuizFormInput {
     medium?: string;
     grade?: string;
     category?: string;
+    categorySlug?: string;
     questions: Question[];
 }
 
@@ -83,6 +84,7 @@ export async function saveQuizAction(input: QuizFormInput) {
             medium: input.medium?.trim() || '',
             grade: input.grade?.trim() || '',
             category: input.category?.trim() || '',
+            categorySlug: input.categorySlug?.trim() || '',
         };
 
         if (existing) {

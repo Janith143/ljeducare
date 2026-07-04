@@ -40,6 +40,32 @@ const attachPaymentSlip = onCall(async (request) => {
     return { success: true };
 });
 
+/** Student attaches ONE uploaded slip to every pending_slip sale in a cart order. */
+const attachOrderSlip = onCall(async (request) => {
+    const uid = request.auth?.uid;
+    if (!uid) throw new HttpsError('unauthenticated', 'Sign-in required');
+    const { orderId, slipImageUrl } = request.data || {};
+    if (!orderId || typeof slipImageUrl !== 'string' || !slipImageUrl.startsWith('https://')) {
+        throw new HttpsError('invalid-argument', 'orderId and a valid slipImageUrl are required');
+    }
+
+    const db = getFirestore();
+    const orderRef = db.collection('orders').doc(String(orderId));
+    const orderDoc = await orderRef.get();
+    if (!orderDoc.exists) throw new HttpsError('not-found', 'Order not found');
+    const order = orderDoc.data();
+    if (order.studentId !== uid) throw new HttpsError('permission-denied', 'Not your order');
+
+    const now = new Date().toISOString();
+    const batch = db.batch();
+    for (const sid of order.saleIds || []) {
+        batch.update(db.collection('sales').doc(String(sid)), { slipImageUrl, slipUploadedAt: now });
+    }
+    batch.update(orderRef, { slipImageUrl, slipUploadedAt: now });
+    await batch.commit();
+    return { success: true };
+});
+
 /** Admin approves a slip sale — confirms the received amount, then settles. */
 const approveSlipSale = onCall(async (request) => {
     const adminUid = requirePerm(request, 'requests');
@@ -89,4 +115,4 @@ const rejectSlipSale = onCall(async (request) => {
     return { success: true };
 });
 
-module.exports = { attachPaymentSlip, approveSlipSale, rejectSlipSale, requirePerm };
+module.exports = { attachPaymentSlip, attachOrderSlip, approveSlipSale, rejectSlipSale, requirePerm };

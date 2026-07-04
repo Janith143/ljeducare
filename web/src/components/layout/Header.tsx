@@ -1,11 +1,13 @@
 import Link from 'next/link';
+import HeaderSearch from './HeaderSearch';
+import CartIcon from '@/components/cart/CartIcon';
 import { SITE } from '@/lib/site';
 
 const NAV_LINKS = [
-    { href: '/classes', label: 'Classes' },
+    { href: '/categories', label: 'Categories' },
     { href: '/courses', label: 'Courses' },
+    { href: '/classes', label: 'Classes' },
     { href: '/quizzes', label: 'Quizzes' },
-    { href: '/exams', label: 'Exams' },
     { href: '/teachers', label: 'Teachers' },
 ];
 
@@ -21,7 +23,7 @@ export default function Header() {
                     {SITE.name}
                 </Link>
 
-                <nav className="hidden items-center gap-6 md:flex" aria-label="Main">
+                <nav className="hidden items-center gap-5 lg:flex" aria-label="Main">
                     {NAV_LINKS.map((link) => (
                         <Link
                             key={link.href}
@@ -33,11 +35,16 @@ export default function Header() {
                     ))}
                 </nav>
 
+                <div className="mx-2 hidden max-w-xs flex-1 md:block">
+                    <HeaderSearch />
+                </div>
+
                 <div className="flex items-center gap-2">
+                    <CartIcon />
                     <Link href="/login" className="btn-secondary text-sm">
                         Log in
                     </Link>
-                    <Link href="/register" className="btn-primary text-sm">
+                    <Link href="/register" className="hidden btn-primary text-sm sm:inline-flex">
                         Register
                     </Link>
                 </div>

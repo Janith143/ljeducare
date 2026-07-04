@@ -79,7 +79,8 @@ export interface LiveClass {
     grade?: string;
     lastSessionFinishedAt?: string;
     attachedQuizId?: string;
-    category?: string;
+    category?: string;         // display name (legacy free-text)
+    categorySlug?: string;     // reference to categories/{slug}
     parentClassId?: string;    // ad-hoc extra session → source class
     createdAt?: string;
 }

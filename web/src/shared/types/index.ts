@@ -6,4 +6,5 @@ export * from './courses';
 export * from './quizzes';
 export * from './exams';
 export * from './sales';
+export * from './categories';
 export * from './misc';

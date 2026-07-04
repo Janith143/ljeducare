@@ -9,6 +9,10 @@ const { logger } = require('firebase-functions');
 const { getFirestore } = require('firebase-admin/firestore');
 const { verifyWebhookSignature } = require('./client');
 const { finalizeSale } = require('../finalize');
+const { finalizeOrder } = require('./cartOrders');
+
+/** custom_id starting `ORD-` is a cart order (many sales); otherwise a single sale. */
+const isOrder = (id) => typeof id === 'string' && id.startsWith('ORD-');
 
 const paypalWebhook = onRequest(
     { secrets: ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_SECRET', 'PAYPAL_WEBHOOK_ID'] },
@@ -36,16 +40,15 @@ const paypalWebhook = onRequest(
             switch (event.event_type) {
                 case 'PAYMENT.CAPTURE.COMPLETED': {
                     if (!resource.custom_id) break;
-                    await finalizeSale(String(resource.custom_id), {
-                        gateway: 'paypal',
-                        gatewayCaptureId: resource.id,
-                        settledBy: 'paypal-webhook',
-                    });
+                    const ctx = { gateway: 'paypal', gatewayCaptureId: resource.id, settledBy: 'paypal-webhook' };
+                    if (isOrder(resource.custom_id)) await finalizeOrder(String(resource.custom_id), ctx);
+                    else await finalizeSale(String(resource.custom_id), ctx);
                     break;
                 }
                 case 'PAYMENT.CAPTURE.DENIED': {
                     if (!resource.custom_id) break;
-                    await markFailed(String(resource.custom_id), 'Capture denied by PayPal');
+                    if (isOrder(resource.custom_id)) await markOrderFailed(String(resource.custom_id));
+                    else await markFailed(String(resource.custom_id), 'Capture denied by PayPal');
                     break;
                 }
                 case 'PAYMENT.CAPTURE.REFUNDED': {
@@ -64,6 +67,13 @@ const paypalWebhook = onRequest(
         }
     },
 );
+
+async function markOrderFailed(orderId) {
+    const ref = getFirestore().collection('orders').doc(orderId);
+    const doc = await ref.get();
+    if (!doc.exists || doc.data().status === 'completed') return;
+    await ref.update({ status: 'failed', failedAt: new Date().toISOString() });
+}
 
 async function markFailed(saleId, reason) {
     const ref = getFirestore().collection('sales').doc(saleId);

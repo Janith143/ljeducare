@@ -4,9 +4,10 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import type { LiveClass } from '@ljeducare/shared';
 import { saveClassAction, type ClassFormInput } from '@/app/teacher/classes/actions';
+import CategorySelect, { type CategoryOpt } from '@/components/teacher/CategorySelect';
 
 /** Create/edit form for a live class (ported ScheduleClassModal essentials). */
-export default function ClassForm({ existing }: { existing?: LiveClass }) {
+export default function ClassForm({ existing, categories = [] }: { existing?: LiveClass; categories?: CategoryOpt[] }) {
     const router = useRouter();
     const [pending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
@@ -33,7 +34,8 @@ export default function ClassForm({ existing }: { existing?: LiveClass }) {
             weeklyPaymentOption: String(f.get('weeklyPaymentOption') ?? 'per_month') as 'per_session' | 'per_month',
             medium: String(f.get('medium') ?? ''),
             grade: String(f.get('grade') ?? ''),
-            category: String(f.get('category') ?? ''),
+            categorySlug: String(f.get('categorySlug') ?? ''),
+            category: categories.find((c) => c.slug === String(f.get('categorySlug') ?? ''))?.name ?? '',
             joiningLink: String(f.get('joiningLink') ?? ''),
             recordingMaxViews: Number(f.get('recordingMaxViews') ?? 0),
             recordingExpiryDays: Number(f.get('recordingExpiryDays') ?? 60),
@@ -73,7 +75,7 @@ export default function ClassForm({ existing }: { existing?: LiveClass }) {
                     <input name="medium" placeholder="Medium (Sinhala…)" defaultValue={existing?.medium} className="input" />
                     <input name="grade" placeholder="Grade" defaultValue={existing?.grade} className="input" />
                 </div>
-                <input name="category" placeholder="Category (optional, e.g. Theory / Revision)" defaultValue={existing?.category} className="input" />
+                <CategorySelect categories={categories} defaultSlug={existing?.categorySlug} defaultName={existing?.category} />
             </section>
 
             <section className="card space-y-3">

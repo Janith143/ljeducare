@@ -33,7 +33,8 @@ export interface Quiz {
     medium?: string;
     grade?: string;
     attachedToClassId?: string;
-    category?: string;
+    category?: string;         // display name (legacy free-text)
+    categorySlug?: string;     // reference to categories/{slug}
     createdAt?: string;
 }
 

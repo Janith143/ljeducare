@@ -4,6 +4,7 @@ import { COLLECTIONS } from '@ljeducare/shared';
 import CourseForm from '@/components/teacher/CourseForm';
 import { requireRole } from '@/lib/auth/session';
 import { getOwnStaffProfile } from '@/lib/data/teacher';
+import { listCategories } from '@/lib/data/categories';
 import { adminDb } from '@/lib/firebase/admin';
 
 export const dynamic = 'force-dynamic';
@@ -25,10 +26,12 @@ export default async function EditCoursePage({
         if (!staff || course.teacherId !== staff.id) notFound();
     }
 
+    const categories = (await listCategories()).map((c) => ({ slug: c.slug, name: c.name }));
+
     return (
         <div className="mx-auto max-w-2xl space-y-6">
             <h1 className="text-2xl font-bold">Edit course</h1>
-            <CourseForm existing={course} />
+            <CourseForm existing={course} categories={categories} />
         </div>
     );
 }
