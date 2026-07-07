@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { isRole } from '@ljeducare/shared';
 import { roleHomePath } from '@/lib/auth/paths';
@@ -19,7 +19,6 @@ function roleFromIdToken(idToken: string) {
 /** Sign in with Firebase Auth, then trade the ID token for a session cookie. */
 export default function LoginForm() {
     const router = useRouter();
-    const searchParams = useSearchParams();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
@@ -41,7 +40,7 @@ export default function LoginForm() {
             });
             if (!res.ok) throw new Error('Could not establish a session. Please try again.');
 
-            const next = searchParams.get('next');
+            const next = new URLSearchParams(window.location.search).get('next');
             const fallback = roleHomePath(roleFromIdToken(idToken));
             router.push(next && next.startsWith('/') ? next : fallback);
             router.refresh();

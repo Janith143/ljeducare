@@ -44,7 +44,7 @@ export default function Header() {
                     <Link href="/login" className="btn-secondary text-sm">
                         Log in
                     </Link>
-                    <Link href="/register" className="hidden btn-primary text-sm sm:inline-flex">
+                    <Link href="/register" className="btn-primary text-sm">
                         Register
                     </Link>
                 </div>
