@@ -20,8 +20,12 @@ export default function SlipUploadClient({ saleId }: { saleId: string }) {
         setBusy(true);
         setError(null);
         try {
-            const { getClientStorage } = await import('@/lib/firebase/client');
+            const { ensureClientSignedIn, getClientStorage } = await import('@/lib/firebase/client');
             const { getDownloadURL, ref, uploadBytes } = await import('firebase/storage');
+
+            // The Storage upload needs the client SDK authed (payment-slips rule = isAuthed());
+            // the app authenticates by cookie, so align the client SDK to the session first.
+            await ensureClientSignedIn();
 
             const path = `payment-slips/${saleId}-${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
             const storageRef = ref(getClientStorage(), path);

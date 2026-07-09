@@ -36,7 +36,11 @@ export const authConfig = {
     },
     serviceAccount,
     enableMultipleCookies: true,
-    enableCustomToken: false,
+    // Mint a Firebase custom token alongside the session cookie so the client
+    // Auth SDK can be kept signed in (SessionGuard). Without this, callable
+    // Cloud Functions see no auth token even when the cookie session is valid,
+    // and reject with "Sign-in required".
+    enableCustomToken: true,
     debug: false,
 };
 

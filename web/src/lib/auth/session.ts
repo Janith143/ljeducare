@@ -40,6 +40,17 @@ export async function getUser(): Promise<SessionUser | null> {
     };
 }
 
+/**
+ * The Firebase custom token minted alongside the session cookie
+ * (enableCustomToken). Used client-side to keep the Auth SDK signed in so
+ * callable Cloud Functions receive an ID token. Null when signed out or when
+ * the current cookie predates enableCustomToken (refreshes on next login).
+ */
+export async function getSessionCustomToken(): Promise<string | null> {
+    const tokens = await getTokens(await cookies(), authConfig);
+    return tokens?.customToken ?? null;
+}
+
 /** Require a signed-in user with one of the given roles, else redirect to /login. */
 export async function requireRole(...roles: Role[]): Promise<SessionUser> {
     const user = await getUser();

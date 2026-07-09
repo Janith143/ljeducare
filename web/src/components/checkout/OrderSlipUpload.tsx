@@ -16,8 +16,10 @@ export default function OrderSlipUpload({ orderId }: { orderId: string }) {
         if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5 MB.'); return; }
         setBusy(true); setError(null);
         try {
-            const { getClientStorage } = await import('@/lib/firebase/client');
+            const { ensureClientSignedIn, getClientStorage } = await import('@/lib/firebase/client');
             const { getDownloadURL, ref, uploadBytes } = await import('firebase/storage');
+            // Align the client SDK to the cookie session so the Storage upload is authed.
+            await ensureClientSignedIn();
             const path = `payment-slips/order-${orderId}-${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
             const storageRef = ref(getClientStorage(), path);
             await uploadBytes(storageRef, file, { contentType: file.type });

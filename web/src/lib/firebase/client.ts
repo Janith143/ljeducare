@@ -73,8 +73,55 @@ export function getClientFunctions(): Functions {
     return functions;
 }
 
+/**
+ * Align the client Firebase SDK with the cookie session.
+ *
+ * The app authenticates by session cookie; the client SDK does NOT sign in as a
+ * side-effect. So client-SDK operations (Storage uploads, callable Functions) can run
+ * unauthenticated or with a stale token whose role/permission claims diverge from the
+ * session. This signs the client SDK in as the session user via a short-lived custom
+ * token minted at /api/auth/client-token. Pass `uid` to enforce the expected identity
+ * and `refresh: true` to force a claims refresh when already signed in as that user.
+ * Best-effort: on any failure the cookie session still governs the app.
+ */
+let signInInFlight: Promise<void> | null = null;
+
+export function ensureClientSignedIn(opts?: { uid?: string; refresh?: boolean }): Promise<void> {
+    // Dedupe concurrent callers (SessionGuard + AuthProvider + a callable can all fire
+    // on first load) so the client SDK signs in exactly once.
+    if (signInInFlight) return signInInFlight;
+    signInInFlight = doEnsureClientSignedIn(opts).finally(() => {
+        signInInFlight = null;
+    });
+    return signInInFlight;
+}
+
+async function doEnsureClientSignedIn(opts?: { uid?: string; refresh?: boolean }): Promise<void> {
+    const { uid, refresh } = opts ?? {};
+    const auth = getClientAuth();
+    await auth.authStateReady();
+    const cur = auth.currentUser;
+    if (cur && (!uid || cur.uid === uid)) {
+        if (refresh) {
+            try {
+                await cur.getIdToken(true);
+            } catch {
+                /* keep going */
+            }
+        }
+        return;
+    }
+    const res = await fetch('/api/auth/client-token');
+    if (!res.ok) return;
+    const { token } = (await res.json()) as { token?: string };
+    if (!token) return;
+    const { signInWithCustomToken } = await import('firebase/auth');
+    await signInWithCustomToken(auth, token);
+}
+
 /** Invoke a callable Cloud Function by name (region asia-south1). */
 export async function callFunction<TReq, TRes>(name: string, data: TReq): Promise<TRes> {
+    await ensureClientSignedIn();
     const fn = httpsCallable<TReq, TRes>(getClientFunctions(), name);
     const result = await fn(data);
     return result.data;
