@@ -13,7 +13,15 @@ interface Summary {
 }
 
 /** Mark a whole class's attendance from an uploaded Excel of student IDs. */
-export default function KioskBulkUpload({ classId, onDone }: { classId: string; onDone?: () => void }) {
+export default function KioskBulkUpload({
+    classId,
+    sessionDate,
+    onDone,
+}: {
+    classId: string;
+    sessionDate?: string;
+    onDone?: () => void;
+}) {
     const fileRef = useRef<HTMLInputElement>(null);
     const [busy, setBusy] = useState(false);
     const [progress, setProgress] = useState('');
@@ -31,9 +39,9 @@ export default function KioskBulkUpload({ classId, onDone }: { classId: string; 
                 setProgress(`Marking ${i + 1} / ${rows.length}…`);
                 try {
                     const res = await callFunction<
-                        { classId: string; studentId: string; payment: string },
+                        { classId: string; studentId: string; payment: string; sessionDate?: string },
                         { alreadyMarked?: boolean; paymentStatus?: string }
-                    >('markAttendance', { classId, studentId: rows[i].studentId, payment: rows[i].payment });
+                    >('markAttendance', { classId, studentId: rows[i].studentId, payment: rows[i].payment, sessionDate });
                     if (res.alreadyMarked) s.already++;
                     else if (res.paymentStatus === 'unpaid') s.unpaid++;
                     else s.marked++;
