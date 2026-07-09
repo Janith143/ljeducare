@@ -8,10 +8,11 @@ export const dynamic = 'force-dynamic';
 export default async function StudentAttendancePage() {
     const user = await requireRole('student');
 
-    const snap = await adminDb()
-        .collection(COLLECTIONS.ATTENDANCE)
-        .where('studentId', '==', user.uid)
-        .get();
+    const [snap, userDoc] = await Promise.all([
+        adminDb().collection(COLLECTIONS.ATTENDANCE).where('studentId', '==', user.uid).get(),
+        adminDb().collection(COLLECTIONS.USERS).doc(user.uid).get(),
+    ]);
+    const studentId = (userDoc.data()?.studentId as string | undefined) ?? undefined;
     const records = snap.docs
         .map((d) => d.data())
         .sort((a, b) => (b.attendedAt as string).localeCompare(a.attendedAt as string));
@@ -20,7 +21,7 @@ export default async function StudentAttendancePage() {
         <div className="space-y-6">
             <h1 className="text-2xl font-bold">Attendance</h1>
             <div className="grid gap-6 lg:grid-cols-[minmax(260px,320px)_1fr]">
-                <StudentQrCard uid={user.uid} name={user.name ?? ''} />
+                <StudentQrCard uid={user.uid} studentId={studentId} name={user.name ?? ''} />
                 <section className="space-y-2">
                     <h2 className="font-semibold">My attendance history ({records.length})</h2>
                     {records.length ? (

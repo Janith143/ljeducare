@@ -36,11 +36,20 @@ const markAttendance = onCall(async (request) => {
         : new Date().toISOString().slice(0, 10);
 
     const db = getFirestore();
-    const [classDoc, studentDoc] = await Promise.all([
-        db.collection('classes').doc(String(classId)).get(),
-        db.collection('users').doc(String(studentId)).get(),
-    ]);
+    const classDoc = await db.collection('classes').doc(String(classId)).get();
     if (!classDoc.exists || classDoc.data().isDeleted) throw new HttpsError('not-found', 'Class not found');
+
+    // Resolve the student by users doc-id (= uid, what the QR encodes) first, then by the
+    // business studentId field (LJE####XX) so staff can type the human-facing id too.
+    let studentDoc = await db.collection('users').doc(String(studentId)).get();
+    if (!studentDoc.exists) {
+        const byBizId = await db
+            .collection('users')
+            .where('studentId', '==', String(studentId).trim())
+            .limit(1)
+            .get();
+        if (!byBizId.empty) studentDoc = byBizId.docs[0];
+    }
     if (!studentDoc.exists || studentDoc.data().role !== 'student') {
         throw new HttpsError('not-found', 'Student not found — check the ID');
     }

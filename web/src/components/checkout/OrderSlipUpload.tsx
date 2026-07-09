@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { callFunction } from '@/lib/firebase/client';
+import { uploadOrderSlipAction } from '@/app/payment/order/[orderId]/actions';
 
-/** Upload one bank slip for a whole cart order → attachOrderSlip (all sales). */
+/** Upload one bank slip for a whole cart order via a server action (Admin SDK). */
 export default function OrderSlipUpload({ orderId }: { orderId: string }) {
     const router = useRouter();
     const [file, setFile] = useState<File | null>(null);
@@ -16,15 +16,11 @@ export default function OrderSlipUpload({ orderId }: { orderId: string }) {
         if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5 MB.'); return; }
         setBusy(true); setError(null);
         try {
-            const { ensureClientSignedIn, getClientStorage } = await import('@/lib/firebase/client');
-            const { getDownloadURL, ref, uploadBytes } = await import('firebase/storage');
-            // Align the client SDK to the cookie session so the Storage upload is authed.
-            await ensureClientSignedIn();
-            const path = `payment-slips/order-${orderId}-${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
-            const storageRef = ref(getClientStorage(), path);
-            await uploadBytes(storageRef, file, { contentType: file.type });
-            const slipImageUrl = await getDownloadURL(storageRef);
-            await callFunction<{ orderId: string; slipImageUrl: string }, { success: boolean }>('attachOrderSlip', { orderId, slipImageUrl });
+            const fd = new FormData();
+            fd.append('orderId', orderId);
+            fd.append('file', file);
+            const res = await uploadOrderSlipAction(fd);
+            if (res.error) { setError(res.error); return; }
             router.refresh();
         } catch (e: unknown) {
             setError((e as Error)?.message ?? 'Upload failed — please try again.');

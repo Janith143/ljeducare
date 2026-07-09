@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { callFunction } from '@/lib/firebase/client';
+import { uploadPaymentSlipAction } from '@/app/payment/slip/[saleId]/actions';
 
-/** Upload the transfer slip to Storage, then attach it to the sale. */
+/** Upload the transfer slip via a server action (Admin SDK) and attach it to the sale. */
 export default function SlipUploadClient({ saleId }: { saleId: string }) {
     const router = useRouter();
     const [file, setFile] = useState<File | null>(null);
@@ -20,22 +20,14 @@ export default function SlipUploadClient({ saleId }: { saleId: string }) {
         setBusy(true);
         setError(null);
         try {
-            const { ensureClientSignedIn, getClientStorage } = await import('@/lib/firebase/client');
-            const { getDownloadURL, ref, uploadBytes } = await import('firebase/storage');
-
-            // The Storage upload needs the client SDK authed (payment-slips rule = isAuthed());
-            // the app authenticates by cookie, so align the client SDK to the session first.
-            await ensureClientSignedIn();
-
-            const path = `payment-slips/${saleId}-${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
-            const storageRef = ref(getClientStorage(), path);
-            await uploadBytes(storageRef, file, { contentType: file.type });
-            const slipImageUrl = await getDownloadURL(storageRef);
-
-            await callFunction<{ saleId: string; slipImageUrl: string }, { success: boolean }>(
-                'attachPaymentSlip',
-                { saleId, slipImageUrl },
-            );
+            const fd = new FormData();
+            fd.append('saleId', saleId);
+            fd.append('file', file);
+            const res = await uploadPaymentSlipAction(fd);
+            if (res.error) {
+                setError(res.error);
+                return;
+            }
             router.push(`/payment/success/${saleId}`);
         } catch (e: unknown) {
             setError((e as Error)?.message ?? 'Upload failed — please try again.');
