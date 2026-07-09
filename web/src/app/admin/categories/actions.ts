@@ -1,10 +1,42 @@
 'use server';
 
+import { randomUUID } from 'node:crypto';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import type { HomepageSettings } from '@ljeducare/shared';
 import { COLLECTIONS, SETTINGS_DOCS, slugify } from '@ljeducare/shared';
 import { requirePermission } from '@/lib/auth/session';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb, adminStorage } from '@/lib/firebase/admin';
+
+/**
+ * Upload a category image via the SERVER (Admin SDK), authed by the session cookie.
+ * The old client-side Storage upload needed the client SDK's token to carry an admin
+ * role, which diverges from the cookie session and failed with storage/unauthorized.
+ */
+export async function uploadCategoryImageAction(formData: FormData): Promise<{ url?: string; error?: string }> {
+    await requirePermission('content');
+    const file = formData.get('file');
+    if (!(file instanceof File)) return { error: 'No file provided.' };
+    if (!file.type.startsWith('image/')) return { error: 'Please choose an image file.' };
+    if (file.size > 5 * 1024 * 1024) return { error: 'Image must be under 5 MB.' };
+
+    try {
+        const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+        if (!bucketName) return { error: 'Storage is not configured.' };
+        const token = randomUUID();
+        const path = `category-images/${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
+        const buffer = Buffer.from(await file.arrayBuffer());
+        await adminStorage()
+            .bucket(bucketName)
+            .file(path)
+            .save(buffer, {
+                metadata: { contentType: file.type, metadata: { firebaseStorageDownloadTokens: token } },
+            });
+        const url = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
+        return { url };
+    } catch (e: unknown) {
+        return { error: (e as Error).message };
+    }
+}
 
 export interface CategoryFormInput {
     id?: string;

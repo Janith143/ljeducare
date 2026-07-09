@@ -7,6 +7,7 @@ import {
     deleteCategoryAction,
     reorderCategoriesAction,
     saveCategoryAction,
+    uploadCategoryImageAction,
     type CategoryFormInput,
 } from '@/app/admin/categories/actions';
 
@@ -36,13 +37,11 @@ export default function CategoriesManager({ categories, teachers }: { categories
         if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5 MB.'); return; }
         setUploading(true); setError(null);
         try {
-            const { getClientStorage } = await import('@/lib/firebase/client');
-            const { getDownloadURL, ref, uploadBytes } = await import('firebase/storage');
-            const path = `category-images/${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
-            const storageRef = ref(getClientStorage(), path);
-            await uploadBytes(storageRef, file, { contentType: file.type });
-            const url = await getDownloadURL(storageRef);
-            setForm((f) => ({ ...f, image: url }));
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await uploadCategoryImageAction(fd);
+            if (res.error) { setError(res.error); return; }
+            if (res.url) setForm((f) => ({ ...f, image: res.url! }));
         } catch (e) {
             setError((e as Error)?.message ?? 'Upload failed.');
         } finally {
