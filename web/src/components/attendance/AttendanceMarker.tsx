@@ -42,11 +42,40 @@ export default function AttendanceMarker({ classes }: { classes: ClassOption[] }
     const [feedback, setFeedback] = useState<{ tone: 'ok' | 'warn' | 'err'; text: string } | null>(null);
     const [notEnrolled, setNotEnrolled] = useState<string | null>(null);
     const [roster, setRoster] = useState<AttendanceRow[]>([]);
+    // The mark/roster callables authenticate from the client SDK, which the app doesn't
+    // sign in as a side-effect of the cookie session. Confirm it's signed in BEFORE
+    // enabling any marking, so a click can't fire an unauthenticated call ("Kiosk or
+    // staff sign-in required") — attendance cash-marks create sales, so reliability matters.
+    const [authReady, setAuthReady] = useState(false);
+    const [authError, setAuthError] = useState(false);
     const inputRef = useRef<HTMLInputElement>(null);
 
+    useEffect(() => {
+        let cancelled = false;
+        (async () => {
+            const { ensureClientSignedIn, getClientAuth } = await import('@/lib/firebase/client');
+            for (let i = 0; i < 4 && !cancelled; i++) {
+                try {
+                    await ensureClientSignedIn({ refresh: true });
+                    if (getClientAuth().currentUser) {
+                        if (!cancelled) setAuthReady(true);
+                        return;
+                    }
+                } catch {
+                    /* retry */
+                }
+                await new Promise((r) => setTimeout(r, 500));
+            }
+            if (!cancelled) setAuthError(true);
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
     const refreshRoster = useCallback(async () => {
-        if (!classId) {
-            setRoster([]);
+        if (!classId || !authReady) {
+            if (!classId) setRoster([]);
             return;
         }
         try {
@@ -58,7 +87,7 @@ export default function AttendanceMarker({ classes }: { classes: ClassOption[] }
         } catch {
             /* roster is best-effort */
         }
-    }, [classId, date]);
+    }, [classId, date, authReady]);
 
     useEffect(() => {
         void refreshRoster();
@@ -70,7 +99,7 @@ export default function AttendanceMarker({ classes }: { classes: ClassOption[] }
     }, [classId, date]);
 
     async function mark(id: string, payment: 'enrolled' | 'cash' | 'unpaid') {
-        if (!classId) return;
+        if (!classId || !authReady) return;
         setBusy(true);
         setFeedback(null);
         try {
@@ -122,6 +151,16 @@ export default function AttendanceMarker({ classes }: { classes: ClassOption[] }
 
     return (
         <div className="space-y-4">
+            {authError ? (
+                <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
+                    Couldn&apos;t verify your session for marking. Please refresh the page and try again.
+                </p>
+            ) : !authReady ? (
+                <p className="rounded-lg bg-light-bg p-3 text-sm text-light-subtle dark:bg-dark-bg dark:text-dark-subtle">
+                    Preparing to mark attendance…
+                </p>
+            ) : null}
+
             {/* Class + date pickers */}
             <section className="card grid gap-4 sm:grid-cols-2">
                 <label className="block text-sm">
@@ -161,8 +200,8 @@ export default function AttendanceMarker({ classes }: { classes: ClassOption[] }
                     placeholder="Student ID (e.g. LJE0012DF)"
                     className="input flex-1"
                 />
-                <button type="submit" disabled={busy || !studentId.trim() || !classId} className="btn-primary px-6">
-                    {busy ? '…' : 'Mark present'}
+                <button type="submit" disabled={busy || !studentId.trim() || !classId || !authReady} className="btn-primary px-6">
+                    {busy ? '…' : !authReady ? 'Preparing…' : 'Mark present'}
                 </button>
             </form>
 
@@ -178,10 +217,10 @@ export default function AttendanceMarker({ classes }: { classes: ClassOption[] }
                         How is <span className="font-mono">{notEnrolled}</span> paying for this session?
                     </p>
                     <div className="grid grid-cols-2 gap-3">
-                        <button type="button" disabled={busy} onClick={() => void mark(notEnrolled, 'cash')} className="btn-primary py-3">
+                        <button type="button" disabled={busy || !authReady} onClick={() => void mark(notEnrolled, 'cash')} className="btn-primary py-3">
                             Cash collected now
                         </button>
-                        <button type="button" disabled={busy} onClick={() => void mark(notEnrolled, 'unpaid')} className="btn-secondary py-3">
+                        <button type="button" disabled={busy || !authReady} onClick={() => void mark(notEnrolled, 'unpaid')} className="btn-secondary py-3">
                             Mark unpaid (credit)
                         </button>
                     </div>
@@ -191,8 +230,11 @@ export default function AttendanceMarker({ classes }: { classes: ClassOption[] }
                 </div>
             )}
 
-            {/* Bulk Excel — re-mounts on class/date change so it targets the current selection */}
-            <KioskBulkUpload key={`${classId}:${date}`} classId={classId} sessionDate={date} onDone={() => void refreshRoster()} />
+            {/* Bulk Excel — re-mounts on class/date change so it targets the current selection.
+                Mounts only once the client is signed in so uploads can't fire unauthenticated. */}
+            {authReady && (
+                <KioskBulkUpload key={`${classId}:${date}`} classId={classId} sessionDate={date} onDone={() => void refreshRoster()} />
+            )}
 
             {/* Roster for the selected session */}
             <section className="card p-0">
