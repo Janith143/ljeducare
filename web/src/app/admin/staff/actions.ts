@@ -77,3 +77,44 @@ export async function setCommissionAction(staffId: string, commissionRate: numbe
     revalidatePath('/admin/staff');
     return { ok: true };
 }
+
+/**
+ * Remove a staff member: soft-delete their teacher profile (hidden from the roster
+ * and public site) and disable the linked login. Reversible — the account can be
+ * reactivated under Users, and the profile doc keeps its data (isDeleted flag).
+ * Their existing content/sales are left intact.
+ */
+export async function removeStaffAction(staffId: string): Promise<{ ok?: true; error?: string }> {
+    const admin = await requirePermission('staff');
+    const db = adminDb();
+    const ref = db.doc(`${COLLECTIONS.STAFF}/${staffId}`);
+    const snap = await ref.get();
+    if (!snap.exists) return { error: 'Staff profile not found.' };
+    const staff = snap.data() as { userId?: string };
+    const userId = staff.userId;
+
+    if (userId && userId === admin.uid) return { error: 'You cannot remove your own account.' };
+    if (userId) {
+        const userSnap = await db.doc(`${COLLECTIONS.USERS}/${userId}`).get();
+        if (userSnap.data()?.role === 'main_admin') return { error: 'A main admin cannot be removed here.' };
+    }
+
+    await ref.set(
+        { isDeleted: true, isPublished: false, deletedAt: new Date().toISOString(), deletedBy: admin.uid },
+        { merge: true },
+    );
+
+    if (userId) {
+        try {
+            await adminAuth().updateUser(userId, { disabled: true });
+            await adminAuth().revokeRefreshTokens(userId);
+        } catch {
+            /* the auth user may already be gone — the profile soft-delete still applies */
+        }
+        await db.doc(`${COLLECTIONS.USERS}/${userId}`).set({ status: 'suspended' }, { merge: true });
+    }
+
+    revalidatePath('/admin/staff');
+    revalidatePath('/admin/users');
+    return { ok: true };
+}

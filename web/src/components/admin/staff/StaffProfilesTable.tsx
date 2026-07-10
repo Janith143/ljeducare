@@ -1,8 +1,9 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
 import type { StaffMember } from '@ljeducare/shared';
-import { setCommissionAction } from '@/app/admin/staff/actions';
+import { removeStaffAction, setCommissionAction } from '@/app/admin/staff/actions';
 
 /** Teacher profiles with inline commission editing. */
 export default function StaffProfilesTable({ staff }: { staff: StaffMember[] }) {
@@ -19,6 +20,7 @@ export default function StaffProfilesTable({ staff }: { staff: StaffMember[] }) 
                         <th className="p-3">Commission %</th>
                         <th className="p-3">Cash balance (LKR)</th>
                         <th className="p-3">Published</th>
+                        <th className="p-3 text-right">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -32,9 +34,32 @@ export default function StaffProfilesTable({ staff }: { staff: StaffMember[] }) 
 }
 
 function ProfileRow({ member }: { member: StaffMember }) {
+    const router = useRouter();
     const [pending, startTransition] = useTransition();
+    const [removing, startRemoving] = useTransition();
     const [rate, setRate] = useState(member.commissionRate);
+    const [error, setError] = useState<string | null>(null);
     const dirty = rate !== member.commissionRate;
+    const balance = member.manualBalance ?? 0;
+
+    function remove() {
+        const balanceNote =
+            balance !== 0
+                ? `\n\nNote: this teacher has an outstanding cash balance of LKR ${balance.toLocaleString()} — settle it under Revenue first if needed.`
+                : '';
+        if (
+            !confirm(
+                `Remove ${member.name} from staff?\n\nThis hides their teacher profile and disables their login. Their existing classes, courses and sales stay intact, and you can reactivate the account later under Users.${balanceNote}`,
+            )
+        )
+            return;
+        setError(null);
+        startRemoving(async () => {
+            const res = await removeStaffAction(member.id);
+            if (res.error) setError(res.error);
+            else router.refresh();
+        });
+    }
 
     return (
         <tr className="border-b border-light-border dark:border-dark-border">
@@ -62,8 +87,19 @@ function ProfileRow({ member }: { member: StaffMember }) {
                     )}
                 </span>
             </td>
-            <td className="p-3">{(member.manualBalance ?? 0).toLocaleString()}</td>
+            <td className="p-3">{balance.toLocaleString()}</td>
             <td className="p-3">{member.isPublished ? 'Yes' : 'No'}</td>
+            <td className="p-3 text-right">
+                <button
+                    type="button"
+                    disabled={removing}
+                    onClick={remove}
+                    className="text-sm font-medium text-red-600 hover:underline disabled:opacity-50"
+                >
+                    {removing ? 'Removing…' : 'Remove'}
+                </button>
+                {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+            </td>
         </tr>
     );
 }
