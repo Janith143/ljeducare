@@ -70,7 +70,19 @@ export default function RegisterForm() {
                 registrationSource: 'web',
             });
 
-            const idToken = await credential.user.getIdToken(true);
+            // Wait for the role claim to land before establishing the session cookie.
+            // syncRoleClaims (a Cloud Function) sets role:'student' AFTER the users doc
+            // write above, so the first token has no role. Establishing the cookie with a
+            // roleless token traps the account (middleware bounces it from its dashboard
+            // AND from /login|/register). Poll a fresh token until the claim appears.
+            let idToken = await credential.user.getIdToken(true);
+            for (let i = 0; i < 12; i++) {
+                const result = await credential.user.getIdTokenResult(true);
+                idToken = result.token;
+                if (result.claims.role) break;
+                await new Promise((r) => setTimeout(r, 800));
+            }
+
             const res = await fetch('/api/login', {
                 method: 'GET',
                 headers: { Authorization: `Bearer ${idToken}` },
