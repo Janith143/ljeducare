@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useHydrated } from '@/hooks/useHydrated';
 
 /**
  * Student self-registration: create the auth user + users/{uid} doc (role student —
@@ -10,6 +11,7 @@ import Link from 'next/link';
  */
 export default function RegisterForm() {
     const router = useRouter();
+    const ready = useHydrated();
     const [form, setForm] = useState({
         firstName: '',
         lastName: '',
@@ -20,6 +22,13 @@ export default function RegisterForm() {
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
 
+    // Warm the Firebase chunks so the first real click registers without extra latency.
+    useEffect(() => {
+        void import('@/lib/firebase/client');
+        void import('firebase/auth');
+        void import('firebase/firestore');
+    }, []);
+
     function update(field: keyof typeof form) {
         return (e: React.ChangeEvent<HTMLInputElement>) =>
             setForm((f) => ({ ...f, [field]: e.target.value }));
@@ -27,6 +36,7 @@ export default function RegisterForm() {
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        if (!ready) return;
         setError(null);
         if (form.password.length < 8) {
             setError('Password must be at least 8 characters.');
@@ -111,8 +121,8 @@ export default function RegisterForm() {
                 <span className="mb-1 block text-sm font-medium">Password</span>
                 <input type="password" required autoComplete="new-password" className="input" value={form.password} onChange={update('password')} />
             </label>
-            <button type="submit" disabled={busy} className="btn-primary w-full">
-                {busy ? 'Creating account…' : 'Create account'}
+            <button type="submit" disabled={busy || !ready} aria-busy={busy} className="btn-primary w-full">
+                {busy ? 'Creating account…' : ready ? 'Create account' : 'Loading…'}
             </button>
             <p className="text-center text-sm text-light-subtle dark:text-dark-subtle">
                 Already registered?{' '}

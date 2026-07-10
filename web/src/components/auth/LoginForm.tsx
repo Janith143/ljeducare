@@ -1,10 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { isRole } from '@ljeducare/shared';
 import { roleHomePath } from '@/lib/auth/paths';
+import { useHydrated } from '@/hooks/useHydrated';
 
 /** Read the role claim from a Firebase ID token (display/routing only — server re-verifies). */
 function roleFromIdToken(idToken: string) {
@@ -19,13 +20,21 @@ function roleFromIdToken(idToken: string) {
 /** Sign in with Firebase Auth, then trade the ID token for a session cookie. */
 export default function LoginForm() {
     const router = useRouter();
+    const ready = useHydrated();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [busy, setBusy] = useState(false);
 
+    // Warm the Firebase auth chunk so the first real click signs in without extra latency.
+    useEffect(() => {
+        void import('@/lib/firebase/client');
+        void import('firebase/auth');
+    }, []);
+
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
+        if (!ready) return;
         setError(null);
         setBusy(true);
         try {
@@ -86,8 +95,8 @@ export default function LoginForm() {
                     onChange={(e) => setPassword(e.target.value)}
                 />
             </label>
-            <button type="submit" disabled={busy} className="btn-primary w-full">
-                {busy ? 'Signing in…' : 'Log in'}
+            <button type="submit" disabled={busy || !ready} aria-busy={busy} className="btn-primary w-full">
+                {busy ? 'Signing in…' : ready ? 'Log in' : 'Loading…'}
             </button>
             <p className="text-center text-sm text-light-subtle dark:text-dark-subtle">
                 New student?{' '}
