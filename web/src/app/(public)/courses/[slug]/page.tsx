@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import PriceTag from '@/components/catalog/PriceTag';
+import AddToCartButton from '@/components/cart/AddToCartButton';
 import { getCourseBySlug, listPublishedCourses } from '@/lib/data/catalog';
 import { getCurrencySettings } from '@/lib/data/currencies';
 
@@ -82,9 +83,15 @@ export default async function CourseDetailPage({
 
             <section className="card flex flex-wrap items-center justify-between gap-4">
                 <PriceTag pricing={course.pricing} settings={settings} className="text-2xl" />
-                <Link href={`/checkout/course/${course.id}`} className="btn-primary px-8 py-3">
-                    Enroll Now
-                </Link>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <AddToCartButton
+                        subtle
+                        item={{ itemType: 'course', itemId: course.id, title: course.title, image: course.coverImage, pricing: course.pricing }}
+                    />
+                    <Link href={`/checkout/course/${course.id}`} className="btn-primary px-8 py-3">
+                        Enroll Now
+                    </Link>
+                </div>
             </section>
         </article>
     );

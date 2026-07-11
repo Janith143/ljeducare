@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Course, CurrencySettings } from '@ljeducare/shared';
+import AddToCartButton from '@/components/cart/AddToCartButton';
 import PriceTag from './PriceTag';
 
 /** Public course card — a real link to /courses/[slug]. */
@@ -25,9 +26,12 @@ export default function CourseCard({
                 {lectureCount ? ` · ${lectureCount} lessons` : ''}
             </p>
             <p className="line-clamp-2 text-sm text-light-subtle dark:text-dark-subtle">{course.description}</p>
-            <div className="mt-auto flex items-center justify-between pt-2">
+            <div className="mt-auto flex items-center justify-between gap-2 pt-2">
                 <PriceTag pricing={course.pricing} settings={settings} />
-                <span className="text-sm font-medium text-primary">View course →</span>
+                <AddToCartButton
+                    subtle
+                    item={{ itemType: 'course', itemId: course.id, title: course.title, image: course.coverImage, pricing: course.pricing }}
+                />
             </div>
         </Link>
     );

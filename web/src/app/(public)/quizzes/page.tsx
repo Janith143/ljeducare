@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import type { CurrencySettings, Quiz } from '@ljeducare/shared';
 import PriceTag from '@/components/catalog/PriceTag';
+import AddToCartButton from '@/components/cart/AddToCartButton';
 import CategoryFilterBar from '@/components/catalog/CategoryFilterBar';
 import { listPublishedQuizzes } from '@/lib/data/catalog';
 import { getCurrencySettings } from '@/lib/data/currencies';
@@ -61,9 +62,9 @@ function QuizCard({ quiz, settings }: { quiz: Quiz; settings: CurrencySettings }
             <p className="text-sm text-light-subtle dark:text-dark-subtle">
                 {quiz.date} · {quiz.startTime} · {quiz.durationMinutes} min
             </p>
-            <div className="mt-auto flex items-center justify-between pt-2">
+            <div className="mt-auto flex items-center justify-between gap-2 pt-2">
                 <PriceTag pricing={quiz.pricing} settings={settings} />
-                <span className="text-sm font-medium text-primary">View quiz →</span>
+                <AddToCartButton subtle item={{ itemType: 'quiz', itemId: quiz.id, title: quiz.title, pricing: quiz.pricing }} />
             </div>
         </Link>
     );
