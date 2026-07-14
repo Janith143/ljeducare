@@ -85,7 +85,12 @@ export default function LoginForm() {
                 />
             </label>
             <label className="block">
-                <span className="mb-1 block text-sm font-medium">Password</span>
+                <span className="mb-1 flex items-center justify-between text-sm font-medium">
+                    Password
+                    <Link href="/forgot-password" className="font-normal text-primary hover:underline">
+                        Forgot password?
+                    </Link>
+                </span>
                 <input
                     type="password"
                     required
