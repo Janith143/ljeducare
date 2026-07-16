@@ -8,15 +8,17 @@ export const SITE = {
 } as const;
 
 /**
- * Where the marketing landing page lives.
- *
- * It is deliberately NOT `/` — `/` stays the existing subject/teacher directory that
- * ljeducare.com serves today. To make the landing page the site home instead:
- *   1. move `src/app/(landing)/landing/page.tsx` up to `src/app/(landing)/page.tsx`,
- *   2. move the current `src/app/(public)/page.tsx` somewhere else (e.g. `portal/`),
- *      since two route groups can't both own `/`,
- *   3. set this to '/'.
- * Everything else (nav/footer logo links, admin "View page", revalidation) follows
- * this constant.
+ * Where the marketing landing page lives — the site home.
+ * Backed by `src/app/(landing)/page.tsx`.
  */
-export const LANDING_PATH = '/landing';
+export const LANDING_PATH = '/';
+
+/**
+ * The LMS itself: the subject/teacher directory that used to be the home page.
+ * Backed by `src/app/(public)/portal/page.tsx`, and what the landing nav's
+ * "Visit LMS" button points at by default.
+ *
+ * These two constants must match the route folders — Next routing is file-based,
+ * so changing a path means moving the page as well. Only one of them can be '/'.
+ */
+export const PORTAL_PATH = '/portal';

@@ -18,6 +18,13 @@ const nextConfig: NextConfig = {
             { protocol: 'https', hostname: 'lh3.googleusercontent.com' },
         ],
     },
+    async redirects() {
+        return [
+            // The landing page was briefly served at /landing before it became the
+            // home page; keep that URL working for anyone who saved or shared it.
+            { source: '/landing', destination: '/', permanent: true },
+        ];
+    },
 };
 
 export default nextConfig;

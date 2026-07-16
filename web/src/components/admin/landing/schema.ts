@@ -61,13 +61,15 @@ export const LANDING_SCHEMA: SectionSchema[] = [
             { kind: 'text', key: 'nameAccent', label: 'Name (bold)', placeholder: 'Educare', help: 'Second half, shown in bold.' },
             { kind: 'icon', key: 'logoIcon', label: 'Logo icon', help: ICON_HELP },
             { kind: 'image', key: 'logoImage', label: 'Logo image', help: 'Optional. Replaces the icon + wordmark entirely.' },
+            { kind: 'text', key: 'lmsLabel', label: '"Visit LMS" label', help: 'The link into the learning portal. Leave empty to hide it.' },
+            { kind: 'text', key: 'lmsHref', label: '"Visit LMS" link', placeholder: '/portal' },
             { kind: 'text', key: 'ctaLabel', label: 'Button label', placeholder: 'Enroll Now' },
             { kind: 'text', key: 'ctaHref', label: 'Button link', placeholder: '/register' },
             {
                 kind: 'list',
                 key: 'navLinks',
                 label: 'Navigation links',
-                help: 'Use #about to jump to a section on this page, or /courses to link elsewhere. Log in and the button are added automatically.',
+                help: 'Use #about to jump to a section on this page, or /courses to link elsewhere. The "Visit LMS" link and the button are added after these automatically.',
                 itemTitle: (i) => String(i.label || 'Link'),
                 makeItem: () => ({ label: '', href: '#' }),
                 fields: [

@@ -3,7 +3,9 @@ import HeaderSearch from './HeaderSearch';
 import CartIcon from '@/components/cart/CartIcon';
 import { SITE } from '@/lib/site';
 
+// `/` is the marketing landing page, so the portal needs its own link here to stay reachable.
 const NAV_LINKS = [
+    { href: '/portal', label: 'Subjects' },
     { href: '/categories', label: 'Categories' },
     { href: '/courses', label: 'Courses' },
     { href: '/classes', label: 'Classes' },

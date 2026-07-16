@@ -22,6 +22,8 @@ export const DEFAULT_LANDING: LandingSettings = {
             { label: 'Achievements', href: '#achievements' },
             { label: 'Contact', href: '#contact' },
         ],
+        lmsLabel: 'Visit LMS',
+        lmsHref: '/portal',
         ctaLabel: 'Enroll Now',
         ctaHref: '/register',
     },

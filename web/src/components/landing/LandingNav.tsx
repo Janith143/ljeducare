@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import type { LandingBrand } from '@ljeducare/shared';
 import LandingLogo from './LandingLogo';
-import { LANDING_PATH } from '@/lib/site';
+import { LANDING_PATH, PORTAL_PATH } from '@/lib/site';
 
 /** Sticky top navigation. The `.scrolled` / `.active` classes are driven by LandingBehaviors. */
 export default function LandingNav({ brand }: { brand: LandingBrand }) {
@@ -19,9 +19,11 @@ export default function LandingNav({ brand }: { brand: LandingBrand }) {
                             <a href={link.href}>{link.label}</a>
                         </li>
                     ))}
-                    <li>
-                        <a href="/login">Log in</a>
-                    </li>
+                    {brand.lmsLabel && (
+                        <li>
+                            <a href={brand.lmsHref || PORTAL_PATH}>{brand.lmsLabel}</a>
+                        </li>
+                    )}
                     {brand.ctaLabel && (
                         <li>
                             <a href={brand.ctaHref || '/register'} className="btn btn-primary btn-sm">

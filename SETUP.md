@@ -125,15 +125,17 @@ If admin user-management errors with permission denied, this is why.
 
 ## 8. The landing page
 
-The marketing page is served at **`/landing`** and is fully admin-editable —
+The marketing page is the **home page (`/`)** and is fully admin-editable —
 **Admin → Landing Page** (`/admin/landing-page`), behind the `landing_page`
 permission (main_admin and manager hold it by default; delegate it to anyone else
 from `/admin/users`).
 
-> `/` deliberately still serves the existing subject/teacher directory — the landing
-> page does **not** replace the current ljeducare.com home page. To swap them later,
-> follow the steps in the `LANDING_PATH` comment in `web/src/lib/site.ts`; everything
-> else (logo links, admin "View page", cache revalidation) follows that constant.
+> **Routing:** `/` is the landing page; the LMS's subject/teacher directory (which
+> used to be the home page) lives at **`/portal`**. The landing nav's "Visit LMS"
+> link points there, and the LMS header links it as "Subjects". Both paths are named
+> in `web/src/lib/site.ts` (`LANDING_PATH` / `PORTAL_PATH`) — Next routing is
+> file-based, so changing either means moving its page too, and only one can be `/`.
+> `/landing` 301-redirects to `/` (it was briefly the landing page's URL).
 
 Every section is covered: brand/nav, hero, trust logos, founder, features,
 learning paths, subjects, faculty, testimonials, results, gallery, recognition,

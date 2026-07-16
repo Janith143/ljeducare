@@ -16,10 +16,13 @@ import { SITE } from '@/lib/site';
 // diverge and on-demand revalidation only reaches one instance).
 export const dynamic = 'force-dynamic';
 
+export const metadata = { title: 'Learning portal' };
+
 const inCategory = (item: { categorySlug?: string; category?: string }, cat: Category) =>
     item.categorySlug ? item.categorySlug === cat.slug : item.category === cat.name || item.category === cat.slug;
 
-export default async function HomePage() {
+/** The LMS itself — subjects, teachers and content. `/` is the marketing landing page. */
+export default async function PortalPage() {
     const [categories, homepage, teachers, courses, quizzes, classes] = await Promise.all([
         listCategories(),
         getHomepageSettings(),

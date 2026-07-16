@@ -34,6 +34,9 @@ export interface LandingBrand {
     /** Image logo — replaces the icon + wordmark when present. */
     logoImage?: string;
     navLinks?: LandingNavLink[];
+    /** Secondary nav link into the LMS itself (sits where "Log in" used to). */
+    lmsLabel?: string;
+    lmsHref?: string;
     /** Primary nav CTA. */
     ctaLabel?: string;
     ctaHref?: string;
