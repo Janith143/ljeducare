@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { isRole } from '@ljeducare/shared';
-import { roleHomePath } from '@/lib/auth/paths';
+import { roleHomePath, safeNextPath } from '@/lib/auth/paths';
 import { useHydrated } from '@/hooks/useHydrated';
 
 /** Read the role claim from a Firebase ID token (display/routing only — server re-verifies). */
@@ -49,9 +49,11 @@ export default function LoginForm() {
             });
             if (!res.ok) throw new Error('Could not establish a session. Please try again.');
 
-            const next = new URLSearchParams(window.location.search).get('next');
+            const next = safeNextPath(new URLSearchParams(window.location.search).get('next'));
             const fallback = roleHomePath(roleFromIdToken(idToken));
-            router.push(next && next.startsWith('/') ? next : fallback);
+            // replace, not push: otherwise /login?next=… stays in history and Back (or
+            // the address bar autocompleting it) sends the user straight back through it.
+            router.replace(next ?? fallback);
             router.refresh();
         } catch (err: unknown) {
             const code = (err as { code?: string })?.code ?? '';

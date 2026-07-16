@@ -34,8 +34,13 @@ export async function middleware(request: NextRequest) {
                 // Signed in but wrong area — send them to their own home.
                 return NextResponse.redirect(new URL(roleHomePath(role), request.url));
             }
-            // Signed-in users hitting /login or /register go to their dashboard.
-            if (pathname === '/login' || pathname === '/register') {
+            // Signed-in users hitting /login or /register go to their dashboard —
+            // EXCEPT a paired kiosk. The kiosk is a shared device with no sign-out of
+            // its own, so bouncing it off /login too would strand the browser as the
+            // kiosk account: /admin sends it to /kiosk, /login sends it to /kiosk, and
+            // the only escape is knowing the /api/logout URL. Let a human reach the
+            // login form and sign in over the kiosk session.
+            if ((pathname === '/login' || pathname === '/register') && role !== 'kiosk') {
                 return NextResponse.redirect(new URL(roleHomePath(role), request.url));
             }
             return NextResponse.next({ request: { headers } });

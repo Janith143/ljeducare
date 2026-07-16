@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import SignOutButton from '@/components/layout/SignOutButton';
 import { requireRole } from '@/lib/auth/session';
 import { SITE } from '@/lib/site';
 
@@ -13,6 +14,14 @@ export default async function KioskHomePage() {
             <Link href="/kiosk/scan" className="btn-primary px-8 py-4 text-lg">
                 Start Scanning
             </Link>
+
+            {/* Escape hatch. Without it this browser is stranded as the kiosk account:
+                every other area redirects back here, and the only way out is knowing
+                the /api/logout URL. */}
+            <div className="mt-4 flex items-center gap-3 text-xs text-light-subtle dark:text-dark-subtle">
+                <span>Not a kiosk device?</span>
+                <SignOutButton />
+            </div>
         </div>
     );
 }

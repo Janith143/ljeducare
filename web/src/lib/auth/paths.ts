@@ -19,6 +19,25 @@ export function roleHomePath(role: Role | undefined): string {
     }
 }
 
+/**
+ * Sanitize a `?next=` login redirect target. Returns null when it should be ignored.
+ *
+ * Rejects:
+ * - anything not starting with '/' — only same-origin paths are ever followed;
+ * - '//evil.com' and '/\evil.com' — these LOOK like paths but are protocol-relative,
+ *   so navigating to them leaves the site entirely (open redirect);
+ * - the kiosk area — a paired scanner is a device destination, never where a human
+ *   should land after signing in. main_admin is allowed into /kiosk, so without this
+ *   an admin who once opened /kiosk keeps getting sent back there by the stale
+ *   `?next=/kiosk` their browser remembers.
+ */
+export function safeNextPath(raw: string | null | undefined): string | null {
+    if (!raw || !raw.startsWith('/')) return null;
+    if (raw.startsWith('//') || raw.startsWith('/\\')) return null;
+    if (raw === '/kiosk' || raw.startsWith('/kiosk/') || raw.startsWith('/kiosk?')) return null;
+    return raw;
+}
+
 /** Area prefix → roles allowed in. Used by middleware for coarse gating. */
 export const AREA_ROLE_MAP: { prefix: string; roles: Role[] }[] = [
     { prefix: '/admin', roles: ADMIN_AREA_ROLES },
