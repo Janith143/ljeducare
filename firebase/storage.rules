@@ -21,6 +21,12 @@ service firebase.storage {
       allow read: if true;
       allow write: if isAdminArea() && isImageUnder5MB();
     }
+    // Landing page media. Uploads run through the Admin SDK (server action gated on
+    // the landing_page permission), so this is a backstop rather than the main gate.
+    match /landing-images/{file=**} {
+      allow read: if true;
+      allow write: if isAdminArea() && isImageUnder5MB();
+    }
     match /cover-images/{file=**} {
       allow read: if true;
       allow write: if isStaffRole() && isImageUnder5MB();

@@ -10,6 +10,7 @@ export type Permission =
     | 'users'
     | 'staff'            // create/edit staff, roles, commission % — sensitive
     | 'content'          // course/class approval queue
+    | 'landing_page'     // public marketing landing page CMS + its contact inbox
     | 'classes'
     | 'courses'
     | 'sales'
@@ -30,6 +31,7 @@ export const ALL_PERMISSIONS: Permission[] = [
     'users',
     'staff',
     'content',
+    'landing_page',
     'classes',
     'courses',
     'sales',
@@ -53,6 +55,7 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<Role, Permission[]> = {
         'analytics',
         'users',
         'content',
+        'landing_page',
         'classes',
         'courses',
         'sales',

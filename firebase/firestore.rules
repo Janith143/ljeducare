@@ -102,6 +102,18 @@ service cloud.firestore {
     // Cross-app connector: link tokens + rate-limit counters — server-only (Admin SDK).
     match /accountLinks/{id} { allow read, write: if false; }
     match /connector_rate_limits/{id} { allow read, write: if false; }
+    // Landing page contact form + newsletter. Submissions are written by the public
+    // server action (Admin SDK) after honeypot/rate-limit checks, never by the client,
+    // so writes stay closed and reads need the landing_page permission.
+    match /landing_inquiries/{id} {
+      allow read: if hasPerm('landing_page');
+      allow write: if false;
+    }
+    match /newsletter_subscribers/{id} {
+      allow read: if hasPerm('landing_page');
+      allow write: if false;
+    }
+    match /landing_rate_limits/{id} { allow read, write: if false; }
     // Device sessions — a user may read their own to detect being kicked; writes server-only.
     match /userSessions/{id} {
       allow read: if isAuthed() && resource.data.uid == request.auth.uid;

@@ -123,7 +123,41 @@ If admin user-management errors with permission denied, this is why.
    - Enter bank details for slip payments
    - Create staff (teachers), kiosk devices, and other admins (manager / teacher_admin)
 
-## 8. Environment variable reference
+## 8. The landing page
+
+The marketing page is served at **`/landing`** and is fully admin-editable —
+**Admin → Landing Page** (`/admin/landing-page`), behind the `landing_page`
+permission (main_admin and manager hold it by default; delegate it to anyone else
+from `/admin/users`).
+
+> `/` deliberately still serves the existing subject/teacher directory — the landing
+> page does **not** replace the current ljeducare.com home page. To swap them later,
+> follow the steps in the `LANDING_PATH` comment in `web/src/lib/site.ts`; everything
+> else (logo links, admin "View page", cache revalidation) follows that constant.
+
+Every section is covered: brand/nav, hero, trust logos, founder, features,
+learning paths, subjects, faculty, testimonials, results, gallery, recognition,
+events, FAQ, contact details and the footer, plus SEO title/description/share
+image. Each saves independently, and images upload straight to Storage
+(`landing-images/`). Contact-form messages and newsletter sign-ups land in
+**Admin → Inquiries** (`/admin/inquiries`), exportable as CSV.
+
+A few things worth knowing:
+
+- **Nothing needs seeding.** `web/src/shared/landing/defaults.ts` (`DEFAULT_LANDING`)
+  ships the whole page; the stored `settings/landing` doc is merged over it. Fields
+  an admin never touches keep following the defaults, so adding a new field there
+  lights it up everywhere without a migration. If Firestore is unreachable, the page
+  still renders from those defaults instead of erroring.
+- **Subject chips** filter the subject cards by each card's *Filter tags*, not by
+  text — keep a card's tags matching the chip names.
+- **Events** with a past date hide themselves (toggleable per section).
+- The design's stylesheet lives at `web/src/app/(landing)/landing.css`, scoped under
+  `.lp` so its resets and class names (`.card`, `.btn-primary`, `.container`) can't
+  collide with the LMS's Tailwind layer. Keep landing styles inside that file and
+  that scope.
+
+## 9. Environment variable reference
 
 See `.env.example`. Anything prefixed `NEXT_PUBLIC_` is public client config;
 everything else is server-side only. On App Hosting, secrets are wired through

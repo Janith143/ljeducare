@@ -4,7 +4,7 @@
     {
       "name": "ljeducare-web",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev", "--workspace", "web"],
+      "runtimeArgs": ["run", "dev"],
       "cwd": "E:\\Business\\Websites\\PrivateLMS\\ljeducare",
       "port": 3000
     }

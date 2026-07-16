@@ -16,6 +16,8 @@ const ADMIN_NAV: (NavItem & { perm: Permission })[] = [
     { href: '/admin/staff', label: 'Staff', perm: 'staff' },
     { href: '/admin/content', label: 'Content Approval', perm: 'content' },
     { href: '/admin/categories', label: 'Categories & Homepage', perm: 'content' },
+    { href: '/admin/landing-page', label: 'Landing Page', perm: 'landing_page' },
+    { href: '/admin/inquiries', label: 'Inquiries', perm: 'landing_page' },
     { href: '/admin/classes', label: 'Classes', perm: 'classes' },
     { href: '/admin/courses', label: 'Courses', perm: 'courses' },
     { href: '/admin/sales', label: 'Sales', perm: 'sales' },

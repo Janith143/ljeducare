@@ -22,6 +22,8 @@ export const COLLECTIONS = {
     LOGIN_EVENTS: 'loginEvents',
     SETTINGS: 'settings',
     KIOSK_DEVICES: 'kiosk_devices',
+    LANDING_INQUIRIES: 'landing_inquiries',          // contact-form submissions, server-only writes
+    NEWSLETTER_SUBSCRIBERS: 'newsletter_subscribers', // server-only writes
 } as const;
 
 /** settings/* document ids */
@@ -31,6 +33,7 @@ export const SETTINGS_DOCS = {
     SITE: 'site',
     KIOSK: 'kiosk',
     HOMEPAGE: 'homepage',
+    LANDING: 'landing',      // the public marketing landing page (/)
 } as const;
 
 /** Storage path roots (mirrors storage.rules). */
@@ -41,4 +44,5 @@ export const STORAGE_PATHS = {
     CERTIFICATES: 'certificates',
     SITE_ASSETS: 'site-assets',
     CATEGORY_IMAGES: 'category-images',
+    LANDING_IMAGES: 'landing-images',
 } as const;
