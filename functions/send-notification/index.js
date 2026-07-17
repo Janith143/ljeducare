@@ -49,9 +49,24 @@ exports.deliverOutboxMessage = onDocumentCreated(
                 logger.warn(`deliverOutboxMessage: unknown type ${msg.type}`);
             }
 
-            const dev = results.sms?.dev || results.email?.dev;
+            // Status must reflect what actually happened. This used to be
+            // `dev ? 'sent_dev' : 'sent'` without ever checking results.*.ok, so a
+            // message the gateway rejected was still recorded as delivered.
+            const attempted = [results.sms, results.email].filter(Boolean);
+            const delivered = attempted.filter((r) => r.ok);
+            const dev = attempted.length > 0 && attempted.every((r) => r.dev);
+            const status =
+                attempted.length === 0
+                    ? 'skipped' // no guardian phone or email on the record
+                    : dev
+                      ? 'sent_dev' // credentials not configured — logged, not sent
+                      : delivered.length === 0
+                        ? 'failed'
+                        : delivered.length < attempted.length
+                          ? 'partial'
+                          : 'sent';
             await doc.ref.update({
-                status: dev ? 'sent_dev' : 'sent',
+                status,
                 results,
                 deliveredAt: new Date().toISOString(),
             });
