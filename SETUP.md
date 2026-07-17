@@ -159,7 +159,57 @@ A few things worth knowing:
   collide with the LMS's Tailwind layer. Keep landing styles inside that file and
   that scope.
 
-## 9. Environment variable reference
+## 9. Notifications (SMS / email / in-app)
+
+SMS goes through **Notify.lk**, email through SMTP, both from the `send-notification`
+codebase. Credentials are function secrets, never database values:
+
+```bash
+firebase functions:secrets:set NOTIFYLK_USER_ID   --project ljeducare
+firebase functions:secrets:set NOTIFYLK_API_KEY   --project ljeducare
+firebase functions:secrets:set NOTIFYLK_SENDER_ID --project ljeducare
+firebase functions:secrets:set SMTP_EMAIL_USER    --project ljeducare
+firebase functions:secrets:set SMTP_EMAIL_PASS    --project ljeducare
+firebase deploy --only functions:send-notification --project ljeducare   # REQUIRED after any change
+```
+
+> A secret change does nothing until you redeploy — functions pin a secret **version**
+> and keep serving the old one. Verify credentials without sending anything (and read
+> your balance) with `node scripts/check-sms.mjs --account`.
+
+**What sends, when**
+
+| Trigger | Recipient | Event key |
+| --- | --- | --- |
+| Student marked present (kiosk scan, bulk upload, manual) | Guardian | `guardianAttendance` |
+| A sale settles (gateway or approved slip) | Student + guardian if on file | `payment` |
+| A class session starts (30 min before, and/or at start) | Enrolled students | `classReminder` |
+| Teacher → their own enrolled students (`/teacher/messages`) | Enrolled students | `teacherMessage` |
+| Admin broadcast (`/admin/communications`) | All students, or one class | *(channels picked per send)* |
+
+Channels per event are **Admin → Settings → Notifications** (`settings/notifications`).
+**SMS defaults to OFF everywhere** — it costs a credit per message, and a class reminder
+sends one per enrolled student per session. Password-reset and email-verification mails
+come from Firebase Auth itself and are unaffected by the SMTP secrets.
+
+**Gotchas**
+
+- The secrets ship seeded with the literal string `REPLACE_ME`, which is **truthy**. Code
+  must use `configured()` (`lib/settings.js`), not `!value`, or an unconfigured install
+  calls the live API with junk instead of logging in dev mode.
+- Notify.lk answers **HTTP 200 with `status:"error"`** for a bad key, an unapproved sender
+  ID, or (on the demo tier) a number not registered on the account — never trust the HTTP
+  status alone.
+- Class times are naive **Sri Lanka local** strings; all clock work lives in
+  `lib/sessions.js` (UTC+5:30, no DST). Run `node scripts/check-schedule.mjs` after
+  touching it — a timezone slip moves every reminder by 5.5 hours silently.
+- Reminders are claimed via `class_reminder_log/{classId}_{date}_{kind}` with `.create()`,
+  so a retried or overlapping tick cannot send twice.
+- `finalizeSale` is the choke point for every money path, including the Rs.5
+  attendance-marking fee. `isReceiptWorthy()` excludes those — otherwise every kiosk scan
+  would fire a "payment received" SMS. Run `node scripts/check-receipts.mjs`.
+
+## 10. Environment variable reference
 
 See `.env.example`. Anything prefixed `NEXT_PUBLIC_` is public client config;
 everything else is server-side only. On App Hosting, secrets are wired through

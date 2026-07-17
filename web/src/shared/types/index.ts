@@ -8,4 +8,5 @@ export * from './exams';
 export * from './sales';
 export * from './categories';
 export * from './landing';
+export * from './notifications';
 export * from './misc';

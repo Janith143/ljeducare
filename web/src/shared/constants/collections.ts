@@ -34,6 +34,7 @@ export const SETTINGS_DOCS = {
     KIOSK: 'kiosk',
     HOMEPAGE: 'homepage',
     LANDING: 'landing',      // the public marketing landing page (/)
+    NOTIFICATIONS: 'notifications', // per-event channel toggles (SMS costs money — default off)
 } as const;
 
 /** Storage path roots (mirrors storage.rules). */

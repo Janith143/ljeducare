@@ -114,6 +114,12 @@ service cloud.firestore {
       allow write: if false;
     }
     match /landing_rate_limits/{id} { allow read, write: if false; }
+    // Notification plumbing — all server-only (Admin SDK). The outbox can hold
+    // guardian/student phone numbers, so it is not client-readable.
+    match /notifications_outbox/{id} { allow read, write: if false; }
+    // Idempotency claims for class reminders. Client writes would let a caller
+    // suppress a reminder (or force a duplicate) by forging a doc id.
+    match /class_reminder_log/{id} { allow read, write: if false; }
     // Device sessions — a user may read their own to detect being kicked; writes server-only.
     match /userSessions/{id} {
       allow read: if isAuthed() && resource.data.uid == request.auth.uid;

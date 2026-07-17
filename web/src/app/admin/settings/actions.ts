@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath, revalidateTag } from 'next/cache';
+import type { ChannelFlags, NotificationSettings } from '@ljeducare/shared';
 import { COLLECTIONS, SETTINGS_DOCS } from '@ljeducare/shared';
 import { requirePermission } from '@/lib/auth/session';
 import { adminDb } from '@/lib/firebase/admin';
@@ -69,4 +70,44 @@ export async function saveBankDetailsAction(
         );
     revalidatePath('/admin/settings');
     return { ok: true };
+}
+
+/**
+ * Save settings/notifications — which channels each automatic message may use.
+ * Values are written explicitly (never partially) so delivery reads one complete doc.
+ */
+export async function saveNotificationSettingsAction(
+    input: NotificationSettings,
+): Promise<{ ok?: boolean; error?: string }> {
+    const user = await requirePermission('settings');
+    const flags = (f: ChannelFlags | undefined) => ({
+        inApp: !!f?.inApp,
+        email: !!f?.email,
+        sms: !!f?.sms,
+    });
+    try {
+        await adminDb()
+            .doc(`${COLLECTIONS.SETTINGS}/${SETTINGS_DOCS.NOTIFICATIONS}`)
+            .set(
+                {
+                    guardianAttendance: flags(input.guardianAttendance),
+                    payment: flags(input.payment),
+                    teacherMessage: flags(input.teacherMessage),
+                    classReminder: {
+                        ...flags(input.classReminder),
+                        enabled: input.classReminder?.enabled !== false,
+                        // Clamp: a negative or absurd lead would silently never fire.
+                        leadMinutes: Math.min(720, Math.max(0, Number(input.classReminder?.leadMinutes ?? 30) || 0)),
+                        alsoAtStart: input.classReminder?.alsoAtStart !== false,
+                    },
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: user.email ?? user.uid,
+                },
+                { merge: true },
+            );
+        revalidatePath('/admin/settings');
+        return { ok: true };
+    } catch (e: unknown) {
+        return { error: (e as Error).message };
+    }
 }

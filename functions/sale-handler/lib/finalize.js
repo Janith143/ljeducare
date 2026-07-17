@@ -16,12 +16,30 @@ function splitCommission(baseAmount, commissionRate) {
 }
 
 /**
+ * Should this settled sale send the student a payment receipt?
+ *
+ * Excludes the money-less bookkeeping sales that also flow through here:
+ * - the Rs.5 attendance-marking fee and free-session grants — every kiosk scan
+ *   creates one, so without this a scan would fire a "payment received" SMS on top
+ *   of the guardian attendance alert;
+ * - free enrollments (baseAmount 0) — nobody paid anything.
+ */
+function isReceiptWorthy(sale) {
+    if (!sale || !sale.studentId) return false;
+    if (!(Number(sale.baseAmount) > 0)) return false;
+    if (sale.paymentMethod === 'attendance_mark') return false;
+    if (sale.freeSession) return false;
+    return true;
+}
+
+/**
  * Finalize a sale by id. `context` records who/what triggered settlement.
  * Returns { alreadyCompleted } — callers treat both outcomes as success.
  */
 async function finalizeSale(saleId, context = {}) {
     const db = getFirestore();
     let alreadyCompleted = false;
+    let settledSale = null;
 
     await db.runTransaction(async (tx) => {
         const saleRef = db.collection('sales').doc(saleId);
@@ -33,6 +51,7 @@ async function finalizeSale(saleId, context = {}) {
             alreadyCompleted = true;
             return;
         }
+        settledSale = sale;
         if (!['pending_gateway', 'pending_slip', 'hold'].includes(sale.status)) {
             throw new Error(`Sale ${saleId} is not settleable (status: ${sale.status})`);
         }
@@ -98,7 +117,37 @@ async function finalizeSale(saleId, context = {}) {
         }
     });
 
+    // Receipt — queued AFTER the transaction, and only when this call is the one that
+    // actually settled the sale.
+    //   * after: a transaction body can be retried, which would queue duplicates;
+    //   * !alreadyCompleted: makes the receipt inherit finalizeSale's idempotency, so a
+    //     replayed gateway webhook can't send a second receipt.
+    // Never throws: a notification problem must not fail a payment that already settled.
+    if (!alreadyCompleted && isReceiptWorthy(settledSale)) {
+        try {
+            const student = (await db.collection('users').doc(settledSale.studentId).get()).data() || {};
+            await db.collection('notifications_outbox').add({
+                type: 'payment_receipt',
+                saleId,
+                studentId: settledSale.studentId,
+                studentName: `${student.firstName ?? ''} ${student.lastName ?? ''}`.trim(),
+                studentEmail: student.email || null,
+                studentPhone: student.contactNumber || null,
+                guardianEmail: student.guardianEmail || null,
+                guardianPhone: student.guardianPhone || null,
+                itemTitle: settledSale.itemName || settledSale.itemType || 'your enrollment',
+                amount: settledSale.amount ?? settledSale.baseAmount,
+                currency: settledSale.currency || 'LKR',
+                method: context.gateway || settledSale.gateway || null,
+                createdAt: new Date().toISOString(),
+                status: 'queued',
+            });
+        } catch (e) {
+            console.error(`finalizeSale: could not queue receipt for ${saleId}: ${e?.message}`);
+        }
+    }
+
     return { alreadyCompleted };
 }
 
-module.exports = { finalizeSale, splitCommission };
+module.exports = { finalizeSale, splitCommission, isReceiptWorthy };
