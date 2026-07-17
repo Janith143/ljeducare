@@ -31,9 +31,14 @@ env:
     value: LJ Educare
   - variable: NEXT_PUBLIC_DEFAULT_CURRENCY
     value: LKR
-  # Live App Hosting URL (swap for your custom domain once connected).
+  # The PUBLIC domain — this is what the site tells the outside world it is.
+  # It feeds metadataBase (canonical + og:url), robots.txt, sitemap.xml, and the
+  # verification URL + QR printed onto certificate PDFs. Certificates are handed to
+  # students and cannot be recalled, so this must be the customer's own domain, never
+  # the App Hosting URL. Keep the .hosted.app domain resolving regardless — QR codes on
+  # certificates issued before 2026-07-16 still point at it.
   - variable: NEXT_PUBLIC_SITE_URL
-    value: https://ljeducare--ljeducare.asia-southeast1.hosted.app
+    value: https://ljeducare.com
 
   # ── Server-side secrets (Cloud Secret Manager). Create them first with:
   #      firebase apphosting:secrets:set AUTH_COOKIE_SIGNATURE_KEY_CURRENT
