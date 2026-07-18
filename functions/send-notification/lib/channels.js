@@ -56,15 +56,24 @@ async function sendSms(phone, message) {
 }
 
 let transporterPromise = null;
-async function getTransporter() {
+function getTransporter() {
     if (!transporterPromise) {
         const nodemailer = require('nodemailer');
-        transporterPromise = Promise.resolve(
-            nodemailer.createTransport({
-                service: 'gmail',
-                auth: { user: process.env.SMTP_EMAIL_USER, pass: process.env.SMTP_EMAIL_PASS },
-            }),
-        );
+        // Host-based SMTP (the institute's own mail server), NOT service:'gmail'.
+        // Defaults are the verified ljeducare values; overridable via env for any move.
+        const host = process.env.SMTP_HOST || 'mail.ljeducare.com';
+        const port = Number(process.env.SMTP_PORT || 465);
+        transporterPromise = nodemailer.createTransport({
+            host,
+            port,
+            secure: (process.env.SMTP_SECURE ?? 'true') !== 'false', // 465 = implicit TLS
+            auth: { user: process.env.SMTP_EMAIL_USER, pass: process.env.SMTP_EMAIL_PASS },
+            // The shared-hosting mail server presents a *.web-hosting.com cert, which
+            // doesn't match mail.ljeducare.com — so hostname verification must be off
+            // (the channel is still TLS-encrypted). Flip SMTP_TLS_STRICT=true only if
+            // the server ever gets a cert matching its own hostname.
+            tls: { rejectUnauthorized: process.env.SMTP_TLS_STRICT === 'true' },
+        });
     }
     return transporterPromise;
 }
@@ -77,9 +86,13 @@ async function sendEmail(to, subject, html) {
     // Never throw: a message with several channels must not lose the others because
     // one of them failed (an email error used to abort the whole outbox delivery).
     try {
-        const transporter = await getTransporter();
+        const transporter = getTransporter();
+        // Send AS the authenticated mailbox — a shared-hosting server rejects a From
+        // that isn't the account it authed. SMTP_FROM lets the visible address differ
+        // from the login if the mailbox is ever aliased.
+        const fromAddress = process.env.SMTP_FROM || process.env.SMTP_EMAIL_USER;
         await transporter.sendMail({
-            from: `"${SITE_NAME}" <${process.env.SMTP_EMAIL_USER}>`,
+            from: `"${SITE_NAME}" <${fromAddress}>`,
             to,
             subject,
             html,
