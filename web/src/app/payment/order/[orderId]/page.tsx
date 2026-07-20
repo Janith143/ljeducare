@@ -1,8 +1,9 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { DocumentReference } from 'firebase-admin/firestore';
-import { formatCurrency } from '@ljeducare/shared';
+import { formatCurrency, COLLECTIONS, SETTINGS_DOCS } from '@ljeducare/shared';
 import ClearCartOnMount from '@/components/cart/ClearCartOnMount';
+import BankTransferDetails, { type BankDetails } from '@/components/checkout/BankTransferDetails';
 import OrderSlipUpload from '@/components/checkout/OrderSlipUpload';
 import { getUser } from '@/lib/auth/session';
 import { adminDb } from '@/lib/firebase/admin';
@@ -27,6 +28,14 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
     const pendingSlip = order.status === 'pending_slip';
     const hasSlip = !!order.slipImageUrl;
     const failed = order.status === 'failed';
+
+    // A student paying a cart order by bank transfer needs the account + QR too —
+    // only load it when it's actually relevant (awaiting a slip).
+    const bank =
+        pendingSlip && !hasSlip
+            ? ((await db.doc(`${COLLECTIONS.SETTINGS}/${SETTINGS_DOCS.GATEWAYS}`).get()).data()?.bankDetails ??
+              {}) as BankDetails
+            : null;
 
     const icon = completed ? '✓' : failed ? '✕' : '🕓';
     const iconBg = completed ? 'bg-green-100' : failed ? 'bg-red-100' : 'bg-amber-100';
@@ -55,6 +64,7 @@ export default async function OrderPage({ params }: { params: Promise<{ orderId:
                 </div>
             </div>
 
+            {pendingSlip && !hasSlip && bank && <BankTransferDetails bank={bank} />}
             {pendingSlip && !hasSlip && <OrderSlipUpload orderId={order.orderId} />}
             {pendingSlip && hasSlip && (
                 <p className="text-sm text-light-subtle dark:text-dark-subtle">

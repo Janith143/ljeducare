@@ -1,10 +1,11 @@
 'use server';
 
+import { randomUUID } from 'node:crypto';
 import { revalidatePath, revalidateTag } from 'next/cache';
 import type { ChannelFlags, NotificationSettings } from '@ljeducare/shared';
-import { COLLECTIONS, SETTINGS_DOCS } from '@ljeducare/shared';
+import { COLLECTIONS, SETTINGS_DOCS, STORAGE_PATHS } from '@ljeducare/shared';
 import { requirePermission } from '@/lib/auth/session';
-import { adminDb } from '@/lib/firebase/admin';
+import { adminDb, adminStorage } from '@/lib/firebase/admin';
 
 export interface CurrencySettingsInput {
     enabled: string[];
@@ -47,6 +48,8 @@ export interface BankDetailsInput {
     accountNumber: string;
     branch: string;
     instructions: string;
+    /** Bank/payment QR shown next to the account details on the slip-payment page. */
+    qrImageUrl?: string;
 }
 
 /** Save institute bank details for the slip-payment flow (settings/gateways.bankDetails). */
@@ -64,12 +67,45 @@ export async function saveBankDetailsAction(
                     accountNumber: input.accountNumber.trim().slice(0, 50),
                     branch: input.branch.trim().slice(0, 100),
                     instructions: input.instructions.trim().slice(0, 500),
+                    // '' explicitly clears a removed QR; undefined would leave the old one.
+                    qrImageUrl: (input.qrImageUrl ?? '').trim().slice(0, 500),
                 },
             },
             { merge: true },
         );
     revalidatePath('/admin/settings');
     return { ok: true };
+}
+
+/**
+ * Upload the bank/payment QR via the SERVER (Admin SDK), authed by the session cookie —
+ * same pattern as the landing/category image uploads. Stored under site-assets, which
+ * is publicly readable so students can see it on the slip page.
+ */
+export async function uploadBankQrAction(formData: FormData): Promise<{ url?: string; error?: string }> {
+    await requirePermission('settings');
+    const file = formData.get('file');
+    if (!(file instanceof File)) return { error: 'No file provided.' };
+    if (!file.type.startsWith('image/')) return { error: 'Please choose an image file.' };
+    if (file.size > 5 * 1024 * 1024) return { error: 'Image must be under 5 MB.' };
+
+    try {
+        const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+        if (!bucketName) return { error: 'Storage is not configured.' };
+        const token = randomUUID();
+        const path = `${STORAGE_PATHS.SITE_ASSETS}/payment-qr-${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`;
+        const buffer = Buffer.from(await file.arrayBuffer());
+        await adminStorage()
+            .bucket(bucketName)
+            .file(path)
+            .save(buffer, {
+                metadata: { contentType: file.type, metadata: { firebaseStorageDownloadTokens: token } },
+            });
+        const url = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
+        return { url };
+    } catch (e: unknown) {
+        return { error: (e as Error).message };
+    }
 }
 
 /**

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { formatCurrency, COLLECTIONS, SETTINGS_DOCS } from '@ljeducare/shared';
+import BankTransferDetails, { type BankDetails } from '@/components/checkout/BankTransferDetails';
 import SlipUploadClient from '@/components/checkout/SlipUploadClient';
 import { requireRole } from '@/lib/auth/session';
 import { adminDb } from '@/lib/firebase/admin';
@@ -23,9 +24,7 @@ export default async function SlipUploadPage({
     const sale = saleDoc.data()!;
     if (sale.studentId !== user.uid || sale.status !== 'pending_slip') notFound();
 
-    const bank = (gatewaysDoc.data()?.bankDetails ?? {}) as {
-        bankName?: string; accountName?: string; accountNumber?: string; branch?: string; instructions?: string;
-    };
+    const bank = (gatewaysDoc.data()?.bankDetails ?? {}) as BankDetails;
 
     return (
         <div className="mx-auto max-w-lg space-y-6 px-4 py-10">
@@ -47,23 +46,7 @@ export default async function SlipUploadPage({
                 </p>
             </section>
 
-            <section className="card space-y-1 text-sm">
-                <h2 className="mb-1 font-semibold">Institute bank account</h2>
-                {bank.accountNumber ? (
-                    <>
-                        <p>{bank.bankName} {bank.branch ? `— ${bank.branch}` : ''}</p>
-                        <p className="font-medium">{bank.accountName}</p>
-                        <p className="font-mono text-lg">{bank.accountNumber}</p>
-                        {bank.instructions && (
-                            <p className="text-light-subtle dark:text-dark-subtle">{bank.instructions}</p>
-                        )}
-                    </>
-                ) : (
-                    <p className="text-light-subtle dark:text-dark-subtle">
-                        Bank details will be shared by the institute office — contact us if unsure.
-                    </p>
-                )}
-            </section>
+            <BankTransferDetails bank={bank} />
 
             <SlipUploadClient saleId={sale.id} />
         </div>
