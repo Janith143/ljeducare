@@ -2,8 +2,9 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import PriceTag from '@/components/catalog/PriceTag';
+import TeacherByline from '@/components/catalog/TeacherByline';
 import AddToCartButton from '@/components/cart/AddToCartButton';
-import { getCourseBySlug, listPublishedCourses } from '@/lib/data/catalog';
+import { getCourseBySlug, getTeacherPublicById, listPublishedCourses } from '@/lib/data/catalog';
 import { getCurrencySettings } from '@/lib/data/currencies';
 
 export const revalidate = 60;
@@ -33,6 +34,7 @@ export default async function CourseDetailPage({
     const course = await getCourseBySlug(slug);
     if (!course) notFound();
 
+    const teacher = await getTeacherPublicById(course.teacherId);
     const freePreviews = course.lectures.filter((l) => l.isFreePreview).length;
 
     return (
@@ -51,6 +53,12 @@ export default async function CourseDetailPage({
                     {course.type === 'recorded' ? 'Recorded course' : 'Live course'}
                 </p>
             </header>
+
+            {teacher && (
+                <section className="card">
+                    <TeacherByline teacher={teacher} />
+                </section>
+            )}
 
             <section className="card whitespace-pre-line">{course.description}</section>
 

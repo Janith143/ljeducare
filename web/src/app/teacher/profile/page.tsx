@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 import type { StaffMember } from '@ljeducare/shared';
+import TeacherProfileEditor from '@/components/teacher/TeacherProfileEditor';
 import ZoomConnectionCard, { type ZoomState } from '@/components/teacher/ZoomConnectionCard';
 import { requireRole } from '@/lib/auth/session';
 import { getOwnStaffProfile } from '@/lib/data/teacher';
@@ -20,33 +21,26 @@ export default async function TeacherProfilePage() {
         <div className="max-w-2xl space-y-6">
             <h1 className="text-2xl font-bold">My Profile</h1>
 
-            {staff ? (
-                <>
-                    <section className="card space-y-1">
-                        <h2 className="font-semibold">{staff.name}</h2>
-                        <p className="text-sm text-light-subtle dark:text-dark-subtle">
-                            {staff.subjects?.join(', ')} · Commission {staff.commissionRate}%
-                        </p>
-                        <p className="text-sm text-light-subtle dark:text-dark-subtle">{staff.email}</p>
-                    </section>
+            {/* Self-service editor. Renders even with no linked staff doc — the save
+                action creates one on first save (ensureStaffProfile). */}
+            <TeacherProfileEditor
+                staff={staff ? { ...staff } : { name: user.name ?? '', email: user.email ?? undefined }}
+            />
 
-                    <Suspense>
-                        <ZoomConnectionCard
-                            zoom={{
-                                staffId: staff.id,
-                                connected: !!staff.zoomAccountConnected,
-                                email: staff.zoomEmail,
-                                useCustomApp: !!staff.useCustomZoomApp,
-                                customClientId: staff.customZoomClientId,
-                                autoRecord: staff.zoomAutoRecordEnabled !== false,
-                            } satisfies ZoomState}
-                        />
-                    </Suspense>
-                </>
-            ) : (
-                <p className="card text-sm text-light-subtle dark:text-dark-subtle">
-                    No teaching profile is linked to your account yet — ask an admin to set one up.
-                </p>
+            {/* Zoom connection needs an existing staff profile. */}
+            {staff && (
+                <Suspense>
+                    <ZoomConnectionCard
+                        zoom={{
+                            staffId: staff.id,
+                            connected: !!staff.zoomAccountConnected,
+                            email: staff.zoomEmail,
+                            useCustomApp: !!staff.useCustomZoomApp,
+                            customClientId: staff.customZoomClientId,
+                            autoRecord: staff.zoomAutoRecordEnabled !== false,
+                        } satisfies ZoomState}
+                    />
+                </Suspense>
             )}
         </div>
     );

@@ -102,3 +102,37 @@ export async function getTeacherBySlug(slug: string): Promise<StaffMember | null
     const all = await listPublishedTeachers();
     return all.find((t) => t.slug === slug) ?? null;
 }
+
+/** The safe, money-free teacher fields shown as a byline on class/course pages. */
+export interface PublicTeacher {
+    id: string;
+    name: string;
+    slug: string;
+    tagline?: string;
+    profileImage?: string;
+    avatar?: string;
+    isPublished: boolean;
+}
+
+/**
+ * Resolve a class/course's teacherId to the byline fields.
+ * Reads the staff doc directly (not the cached list) so an unpublished teacher is
+ * still credited by NAME — the byline just won't link to their public page (which
+ * 404s until they publish). Money fields are never included.
+ */
+export async function getTeacherPublicById(id: string | undefined | null): Promise<PublicTeacher | null> {
+    if (!id) return null;
+    const doc = await adminDb().collection(COLLECTIONS.STAFF).doc(String(id)).get();
+    if (!doc.exists) return null;
+    const t = doc.data() as StaffMember;
+    if (t.isDeleted) return null;
+    return {
+        id: doc.id,
+        name: t.name,
+        slug: t.slug,
+        tagline: t.tagline,
+        profileImage: t.profileImage,
+        avatar: t.avatar,
+        isPublished: t.isPublished === true,
+    };
+}

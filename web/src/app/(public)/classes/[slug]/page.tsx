@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import PriceTag from '@/components/catalog/PriceTag';
-import { getClassBySlug, listPublishedClasses } from '@/lib/data/catalog';
+import TeacherByline from '@/components/catalog/TeacherByline';
+import { getClassBySlug, getTeacherPublicById, listPublishedClasses } from '@/lib/data/catalog';
 import { getCurrencySettings } from '@/lib/data/currencies';
 
 export const revalidate = 60;
@@ -32,6 +33,8 @@ export default async function ClassDetailPage({
     const cls = await getClassBySlug(slug);
     if (!cls) notFound();
 
+    const teacher = await getTeacherPublicById(cls.teacherId);
+
     const schedule =
         cls.recurrence === 'weekly'
             ? `Weekly · ${cls.startTime}–${cls.endTime}`
@@ -53,6 +56,12 @@ export default async function ClassDetailPage({
                 </p>
                 <p className="font-medium">{schedule}</p>
             </header>
+
+            {teacher && (
+                <section className="card">
+                    <TeacherByline teacher={teacher} />
+                </section>
+            )}
 
             <section className="card whitespace-pre-line">{cls.description}</section>
 
