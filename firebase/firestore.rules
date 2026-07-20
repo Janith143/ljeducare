@@ -102,6 +102,9 @@ service cloud.firestore {
     // Cross-app connector: link tokens + rate-limit counters — server-only (Admin SDK).
     match /accountLinks/{id} { allow read, write: if false; }
     match /connector_rate_limits/{id} { allow read, write: if false; }
+    // Marketplace delivery entitlements (pseudonymous partner-hub purchases) — server-only
+    // (Admin SDK via connector /enroll + /content).
+    match /externalEntitlements/{id} { allow read, write: if false; }
     // Landing page contact form + newsletter. Submissions are written by the public
     // server action (Admin SDK) after honeypot/rate-limit checks, never by the client,
     // so writes stay closed and reads need the landing_page permission.
