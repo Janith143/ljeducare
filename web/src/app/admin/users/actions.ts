@@ -6,6 +6,7 @@ import { ALL_PERMISSIONS, COLLECTIONS, MAIN_ADMIN_ONLY } from '@ljeducare/shared
 import { requirePermission, requireRole } from '@/lib/auth/session';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { ensureStaffProfile } from '@/lib/data/staff';
+import { cascadeTeacherContent, restoreTeacherContent } from '@/lib/data/teacherCascade';
 
 /** Roles the main admin may assign to an account (main_admin + kiosk are excluded). */
 const ASSIGNABLE_ROLES: Role[] = ['manager', 'teacher_admin', 'teacher', 'student'];
@@ -23,8 +24,34 @@ export async function setUserStatusAction(uid: string, status: 'active' | 'suspe
     if (status === 'suspended') await adminAuth().revokeRefreshTokens(uid);
     await doc.ref.update({ status });
 
+    // Suspending a teacher hides everything they taught; reactivating gives it back.
+    // Restore only reverts what the cascade hid, so deliberate deletions stay deleted.
+    let hidden;
+    let restored;
+    // Older accounts may lack users.staffId — fall back to the staff doc linked by userId,
+    // otherwise the cascade would silently skip those teachers.
+    let staffId = doc.data()?.staffId as string | undefined;
+    if (!staffId) {
+        const byUser = await adminDb()
+            .collection(COLLECTIONS.STAFF)
+            .where('userId', '==', uid)
+            .limit(1)
+            .get();
+        if (!byUser.empty) staffId = byUser.docs[0].id;
+    }
+    if (staffId) {
+        if (status === 'suspended') {
+            hidden = await cascadeTeacherContent(staffId, { by: admin.uid, reason: 'suspended' });
+        } else {
+            restored = await restoreTeacherContent(staffId, { by: admin.uid });
+        }
+        revalidatePath('/classes');
+        revalidatePath('/courses');
+        revalidatePath('/quizzes');
+    }
+
     revalidatePath('/admin/users');
-    return { ok: true };
+    return { ok: true, hidden, restored };
 }
 
 /**

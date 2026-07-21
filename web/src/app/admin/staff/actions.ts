@@ -6,6 +6,7 @@ import { COLLECTIONS } from '@ljeducare/shared';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { requirePermission } from '@/lib/auth/session';
 import { ensureStaffProfile } from '@/lib/data/staff';
+import { cascadeTeacherContent, countAffectedStudents } from '@/lib/data/teacherCascade';
 
 const CREATABLE_ROLES: Role[] = ['manager', 'teacher_admin', 'teacher'];
 
@@ -84,7 +85,9 @@ export async function setCommissionAction(staffId: string, commissionRate: numbe
  * reactivated under Users, and the profile doc keeps its data (isDeleted flag).
  * Their existing content/sales are left intact.
  */
-export async function removeStaffAction(staffId: string): Promise<{ ok?: true; error?: string }> {
+export async function removeStaffAction(
+    staffId: string,
+): Promise<{ ok?: true; error?: string; hidden?: { classes: number; courses: number; quizzes: number; total: number }; studentsAffected?: number }> {
     const admin = await requirePermission('staff');
     const db = adminDb();
     const ref = db.doc(`${COLLECTIONS.STAFF}/${staffId}`);
@@ -99,10 +102,17 @@ export async function removeStaffAction(staffId: string): Promise<{ ok?: true; e
         if (userSnap.data()?.role === 'main_admin') return { error: 'A main admin cannot be removed here.' };
     }
 
+    // Count BEFORE hiding, so the admin is told how many paying students this cost.
+    const studentsAffected = await countAffectedStudents(staffId);
+
     await ref.set(
         { isDeleted: true, isPublished: false, deletedAt: new Date().toISOString(), deletedBy: admin.uid },
         { merge: true },
     );
+
+    // Removing a teacher hides everything they taught. Tagged + reversible: restoring
+    // the account (Users → reactivate) brings the content and student access back.
+    const hidden = await cascadeTeacherContent(staffId, { by: admin.uid, reason: 'removed' });
 
     if (userId) {
         try {
@@ -116,5 +126,8 @@ export async function removeStaffAction(staffId: string): Promise<{ ok?: true; e
 
     revalidatePath('/admin/staff');
     revalidatePath('/admin/users');
-    return { ok: true };
+    revalidatePath('/classes');
+    revalidatePath('/courses');
+    revalidatePath('/quizzes');
+    return { ok: true, hidden, studentsAffected };
 }
