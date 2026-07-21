@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { formatCurrencyCompact, type Course, type LiveClass } from '@ljeducare/shared';
+import DeleteContentButton from './DeleteContentButton';
 
 export type ContentRow = {
     id: string;
@@ -81,11 +82,14 @@ export default function ContentTable({ rows }: { rows: ContentRow[] }) {
                                 </span>
                             </td>
                             <td className="p-3 text-right">
-                                {row.isPublished && (
-                                    <Link href={row.href} className="text-xs text-primary hover:underline">
-                                        View public page ↗
-                                    </Link>
-                                )}
+                                <span className="inline-flex items-center gap-3">
+                                    {row.isPublished && (
+                                        <Link href={row.href} className="text-xs text-primary hover:underline">
+                                            View public page ↗
+                                        </Link>
+                                    )}
+                                    <DeleteContentButton kind={row.kind} id={row.id} title={row.title} />
+                                </span>
                             </td>
                         </tr>
                     ))}

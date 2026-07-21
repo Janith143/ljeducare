@@ -1,15 +1,47 @@
 'use server';
 
 import { revalidatePath, revalidateTag } from 'next/cache';
+import type { Permission } from '@ljeducare/shared';
 import { COLLECTIONS } from '@ljeducare/shared';
 import { requirePermission } from '@/lib/auth/session';
 import { adminDb } from '@/lib/firebase/admin';
 
-const COLLECTION_BY_KIND: Record<string, { collection: string; tag: string }> = {
-    class: { collection: COLLECTIONS.CLASSES, tag: 'classes' },
-    course: { collection: COLLECTIONS.COURSES, tag: 'courses' },
-    quiz: { collection: COLLECTIONS.QUIZZES, tag: 'quizzes' },
+/** `deletePerm` mirrors the per-collection delete rules in firestore.rules. */
+const COLLECTION_BY_KIND: Record<string, { collection: string; tag: string; deletePerm: Permission }> = {
+    class: { collection: COLLECTIONS.CLASSES, tag: 'classes', deletePerm: 'classes' },
+    course: { collection: COLLECTIONS.COURSES, tag: 'courses', deletePerm: 'courses' },
+    quiz: { collection: COLLECTIONS.QUIZZES, tag: 'quizzes', deletePerm: 'content' },
 };
+
+/**
+ * Soft-delete a class/course/quiz — it leaves the public catalog and every student
+ * view, and appears in the Recycle Bin to be restored or purged. Nothing is
+ * destroyed here; purgeItemAction is the only irreversible step.
+ */
+export async function deleteItemAction(kind: string, id: string) {
+    const target = COLLECTION_BY_KIND[kind];
+    if (!target) return { error: 'Unknown item type.' };
+    const admin = await requirePermission(target.deletePerm);
+
+    const ref = adminDb().collection(target.collection).doc(id);
+    const doc = await ref.get();
+    if (!doc.exists) return { error: 'Item not found.' };
+    if (doc.data()?.isDeleted) return { error: 'That item is already in the recycle bin.' };
+
+    await ref.update({
+        isDeleted: true,
+        isPublished: false,
+        deletedAt: new Date().toISOString(),
+        deletedBy: admin.uid,
+    });
+
+    revalidateTag(target.tag);
+    revalidatePath('/admin/classes');
+    revalidatePath('/admin/courses');
+    revalidatePath('/admin/content');
+    revalidatePath('/admin/recycle-bin');
+    return { ok: true };
+}
 
 /** Restore a soft-deleted item (stays unpublished so an admin re-checks it first). */
 export async function restoreItemAction(kind: string, id: string) {
