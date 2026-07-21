@@ -22,6 +22,7 @@ const ADMIN_NAV: (NavItem & { perm: Permission })[] = [
     { href: '/admin/courses', label: 'Courses', perm: 'courses' },
     { href: '/admin/sales', label: 'Sales', perm: 'sales' },
     { href: '/admin/revenue', label: 'Revenue', perm: 'revenue' },
+    { href: '/admin/marketplace-revenue', label: 'clazz.lk Revenue', perm: 'revenue' },
     { href: '/admin/attendance', label: 'Attendance', perm: 'attendance' },
     { href: '/admin/requests', label: 'Requests', perm: 'requests' },
     { href: '/admin/students', label: 'Student Lookup', perm: 'students' },

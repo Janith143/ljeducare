@@ -12,9 +12,10 @@ import { saveMarketplaceConnectionAction } from '@/app/admin/settings/actions';
 export default function MarketplaceConnectionForm({
     initial,
 }: {
-    initial: { configured: boolean; enabled: boolean; updatedAt?: string | null };
+    initial: { configured: boolean; enabled: boolean; updatedAt?: string | null; providerId?: string; hubUrl?: string };
 }) {
     const [hubKey, setHubKey] = useState('');
+    const [providerId, setProviderId] = useState(initial.providerId ?? '');
     const [enabled, setEnabled] = useState(initial.enabled);
     const [busy, setBusy] = useState(false);
     const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -23,7 +24,11 @@ export default function MarketplaceConnectionForm({
         e.preventDefault();
         setBusy(true);
         setMsg(null);
-        const res = await saveMarketplaceConnectionAction({ hubKey: hubKey.trim() || undefined, enabled });
+        const res = await saveMarketplaceConnectionAction({
+            hubKey: hubKey.trim() || undefined,
+            providerId: providerId.trim() || undefined,
+            enabled,
+        });
         setMsg(res?.error ? { ok: false, text: res.error } : { ok: true, text: 'Marketplace connection saved.' });
         if (!res?.error) setHubKey('');
         setBusy(false);
@@ -62,6 +67,21 @@ export default function MarketplaceConnectionForm({
                     />
                     <span className="mt-1 block text-xs text-light-subtle dark:text-dark-subtle">
                         Stored server-side only. If you rotate it on the clazz.lk side, paste the new key here.
+                    </span>
+                </label>
+
+                <label className="block text-sm">
+                    <span className="mb-1 block font-medium">Our partner ID</span>
+                    <input
+                        value={providerId}
+                        onChange={(e) => setProviderId(e.target.value.toUpperCase())}
+                        placeholder="e.g. LJE"
+                        className="input w-full font-mono"
+                        autoComplete="off"
+                    />
+                    <span className="mt-1 block text-xs text-light-subtle dark:text-dark-subtle">
+                        The short code clazz.lk assigned us. Needed to pull our earnings report — see{' '}
+                        <a href="/admin/marketplace-revenue" className="underline">clazz.lk Revenue</a>.
                     </span>
                 </label>
 

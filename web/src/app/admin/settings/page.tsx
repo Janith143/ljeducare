@@ -28,6 +28,8 @@ export default async function AdminSettingsPage() {
         configured: typeof connector.hubKey === 'string' && connector.hubKey.length > 0,
         enabled: connector.enabled !== false,
         updatedAt: (connector.updatedAt as string) ?? null,
+        providerId: (connector.providerId as string) ?? '',
+        hubUrl: (connector.hubUrl as string) ?? '',
     };
 
     return (

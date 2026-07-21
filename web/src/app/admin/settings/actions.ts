@@ -151,6 +151,10 @@ export async function saveNotificationSettingsAction(
 export interface MarketplaceConnectionInput {
     /** Omitted = keep the existing key (so toggling `enabled` doesn't require re-pasting). */
     hubKey?: string;
+    /** Our id on the hub (e.g. "LJE") — required to pull our own earnings report back. */
+    providerId?: string;
+    /** Hub base URL. Blank = platform default; only set if clazz.lk tells you to. */
+    hubUrl?: string;
     enabled: boolean;
 }
 
@@ -166,12 +170,21 @@ export async function saveMarketplaceConnectionAction(input: MarketplaceConnecti
         const key = (input.hubKey ?? '').trim();
         if (key && key.length < 32) return { error: 'That key looks too short — copy the full value from clazz.lk.' };
 
+        const providerId = (input.providerId ?? '').trim().toUpperCase();
+        if (providerId && !/^[A-Z][A-Z0-9]{1,11}$/.test(providerId)) {
+            return { error: 'Partner ID should be 2–12 letters/digits, e.g. LJE.' };
+        }
+        const hubUrl = (input.hubUrl ?? '').trim().replace(/\/$/, '');
+        if (hubUrl && !/^https:\/\/.+/i.test(hubUrl)) return { error: 'Hub URL must start with https://' };
+
         await adminDb()
             .collection(COLLECTIONS.SETTINGS)
             .doc('connector')
             .set(
                 {
                     ...(key ? { hubKey: key } : {}),
+                    ...(providerId ? { providerId } : {}),
+                    ...(hubUrl ? { hubUrl } : {}),
                     enabled: !!input.enabled,
                     updatedAt: new Date().toISOString(),
                     updatedBy: user.email ?? user.uid,
