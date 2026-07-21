@@ -21,6 +21,7 @@ if (!admin.apps.length) admin.initializeApp();
 const { zoomConnect, zoomCallback, zoomDisconnect, zoomSetCustomApp } = require('./lib/oauth');
 const { createZoomMeeting, getZoomStartUrl } = require('./lib/meetings');
 const { joinZoomClass } = require('./lib/join');
+const { zoomExternalJoin } = require('./lib/external');
 const { zoomWebhook } = require('./lib/webhook');
 
 exports.zoomConnect = zoomConnect;
@@ -30,4 +31,5 @@ exports.zoomSetCustomApp = zoomSetCustomApp;
 exports.createZoomMeeting = createZoomMeeting;
 exports.getZoomStartUrl = getZoomStartUrl;
 exports.joinZoomClass = joinZoomClass;
+exports.zoomExternalJoin = zoomExternalJoin;
 exports.zoomWebhook = zoomWebhook;

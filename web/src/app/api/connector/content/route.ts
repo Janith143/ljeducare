@@ -1,8 +1,34 @@
 import { NextResponse } from 'next/server';
 import { COLLECTIONS } from '@ljeducare/shared';
-import { PORTAL_SIG_HEADER, PORTAL_TS_HEADER, verifySignature } from '@/lib/connector/auth';
+import { PORTAL_SIG_HEADER, PORTAL_TS_HEADER, verifySignature, signPortalRequest } from '@/lib/connector/auth';
 import { resolveEntitlement } from '@/lib/connector/entitlements';
 import { adminDb } from '@/lib/firebase/admin';
+
+// zoom-handler's entitlement-authed registrant minter (same project, asia-south1).
+const ZOOM_EXTERNAL_JOIN_URL =
+    process.env.ZOOM_EXTERNAL_JOIN_URL || 'https://asia-south1-ljeducare.cloudfunctions.net/zoomExternalJoin';
+
+/** Best-effort per-buyer Zoom join mint — signed s2s call; null on any failure. */
+async function mintExternalJoin(entitlementToken: string, classId: string): Promise<string | null> {
+    try {
+        const raw = JSON.stringify({ entitlementToken, classId });
+        const ts = String(Date.now());
+        const res = await fetch(ZOOM_EXTERNAL_JOIN_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'x-portal-timestamp': ts,
+                'x-portal-signature': signPortalRequest(raw, ts),
+            },
+            body: raw,
+            signal: AbortSignal.timeout(12000),
+        });
+        const data = await res.json().catch(() => null);
+        return data && data.ok && data.joinUrl ? String(data.joinUrl) : null;
+    } catch {
+        return null;
+    }
+}
 
 export const dynamic = 'force-dynamic';
 
@@ -57,12 +83,16 @@ export async function POST(request: Request) {
         endTime: String(c.endTime ?? ''),
         recurrence: String(c.recurrence ?? ''),
     };
+    const isZoom = c.meetProvider === 'zoom' && !!c.zoomMeetingId;
+    const joinUrl = isZoom
+        ? await mintExternalJoin(String(body.entitlementToken ?? ''), ent.providerItemId)
+        : null;
     return NextResponse.json({
         ok: true,
         type: 'class',
         title: String(c.title ?? ''),
         schedule,
-        joinMode: c.meetProvider === 'zoom' ? 'zoom_registrant' : 'none',
-        joinUrl: null, // minted per-buyer by the zoom-handler entitlement endpoint (next increment)
+        joinMode: isZoom ? 'zoom_registrant' : 'none',
+        joinUrl,
     }, { status: 200 });
 }
