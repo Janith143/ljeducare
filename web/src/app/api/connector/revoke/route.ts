@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: Request) {
     const raw = await request.text();
-    if (!verifySignature(raw, request.headers.get(PORTAL_TS_HEADER), request.headers.get(PORTAL_SIG_HEADER))) {
+    if (!await verifySignature(raw, request.headers.get(PORTAL_TS_HEADER), request.headers.get(PORTAL_SIG_HEADER))) {
         return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
     }
 

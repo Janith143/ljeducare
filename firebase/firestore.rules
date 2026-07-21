@@ -156,8 +156,12 @@ service cloud.firestore {
     // settings/* — currencies & site config readable; writes main_admin only
     // (gateway secrets live in function secrets, not here).
     match /settings/{doc} {
-      allow read: if true;
-      allow write: if isMainAdmin();
+      // `connector` holds the clazz.lk marketplace pairing KEY — never client readable or
+      // writable (the settings server action writes it via the Admin SDK). The exclusion must
+      // live in THIS rule: Firestore ORs every matching rule, so adding a separate stricter
+      // match for /settings/connector would NOT revoke the access granted here.
+      allow read: if doc != 'connector';
+      allow write: if isMainAdmin() && doc != 'connector';
     }
   }
 }

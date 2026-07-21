@@ -13,12 +13,13 @@ async function mintExternalJoin(entitlementToken: string, classId: string): Prom
     try {
         const raw = JSON.stringify({ entitlementToken, classId });
         const ts = String(Date.now());
+        const signature = await signPortalRequest(raw, ts);
         const res = await fetch(ZOOM_EXTERNAL_JOIN_URL, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'x-portal-timestamp': ts,
-                'x-portal-signature': signPortalRequest(raw, ts),
+                'x-portal-signature': signature,
             },
             body: raw,
             signal: AbortSignal.timeout(12000),
@@ -42,7 +43,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(request: Request) {
     const raw = await request.text();
-    if (!verifySignature(raw, request.headers.get(PORTAL_TS_HEADER), request.headers.get(PORTAL_SIG_HEADER))) {
+    if (!await verifySignature(raw, request.headers.get(PORTAL_TS_HEADER), request.headers.get(PORTAL_SIG_HEADER))) {
         return NextResponse.json({ ok: false, error: 'unauthorized' }, { status: 401 });
     }
 

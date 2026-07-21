@@ -15,8 +15,27 @@ const { apiCall } = require('./client');
 
 const MAX_SKEW_MS = 5 * 60 * 1000;
 
-function verifySignature(rawBody, timestamp, signature) {
-    const key = process.env.PORTAL_BRIDGE_SECRET || '';
+/**
+ * Hub key: the admin-pasted `settings/connector.hubKey` (which is what lets a new partner be
+ * paired with no deploy) falling back to the PORTAL_BRIDGE_SECRET env of the original pairing.
+ * Mirrors web/src/lib/connector/auth.ts. Cached briefly — this runs on every join.
+ */
+let cachedKey = null;
+async function getConnectorKey() {
+    const now = Date.now();
+    if (cachedKey && now - cachedKey.at < 60000) return cachedKey.value;
+    let value = process.env.PORTAL_BRIDGE_SECRET || '';
+    try {
+        const snap = await getFirestore().collection('settings').doc('connector').get();
+        const d = snap.exists ? snap.data() : null;
+        if (d && d.enabled !== false && typeof d.hubKey === 'string' && d.hubKey.trim()) value = d.hubKey.trim();
+    } catch { /* env fallback */ }
+    cachedKey = { value, at: now };
+    return value;
+}
+
+async function verifySignature(rawBody, timestamp, signature) {
+    const key = await getConnectorKey();
     if (!key || !timestamp || !signature) return false;
     const ts = Number(timestamp);
     if (!Number.isFinite(ts) || Math.abs(Date.now() - ts) > MAX_SKEW_MS) return false;
@@ -31,7 +50,7 @@ const zoomExternalJoin = onRequest(
     async (req, res) => {
         if (req.method !== 'POST') return res.status(405).json({ ok: false });
         const raw = req.rawBody ? req.rawBody.toString('utf8') : JSON.stringify(req.body || {});
-        if (!verifySignature(raw, req.get('x-portal-timestamp'), req.get('x-portal-signature'))) {
+        if (!await verifySignature(raw, req.get('x-portal-timestamp'), req.get('x-portal-signature'))) {
             return res.status(401).json({ ok: false, error: 'unauthorized' });
         }
 

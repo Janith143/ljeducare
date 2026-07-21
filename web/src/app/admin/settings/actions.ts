@@ -147,3 +147,40 @@ export async function saveNotificationSettingsAction(
         return { error: (e as Error).message };
     }
 }
+
+export interface MarketplaceConnectionInput {
+    /** Omitted = keep the existing key (so toggling `enabled` doesn't require re-pasting). */
+    hubKey?: string;
+    enabled: boolean;
+}
+
+/**
+ * Save the clazz.lk marketplace pairing key. This is what makes onboarding deploy-free: the
+ * hub derives a per-partner key, an admin pastes it here, and the connector verifies signed
+ * hub calls against it (see lib/connector/auth.ts). Server-only doc — firestore rules deny
+ * client reads, and the key is never returned to the browser.
+ */
+export async function saveMarketplaceConnectionAction(input: MarketplaceConnectionInput) {
+    const user = await requirePermission('settings'); // main_admin only
+    try {
+        const key = (input.hubKey ?? '').trim();
+        if (key && key.length < 32) return { error: 'That key looks too short — copy the full value from clazz.lk.' };
+
+        await adminDb()
+            .collection(COLLECTIONS.SETTINGS)
+            .doc('connector')
+            .set(
+                {
+                    ...(key ? { hubKey: key } : {}),
+                    enabled: !!input.enabled,
+                    updatedAt: new Date().toISOString(),
+                    updatedBy: user.email ?? user.uid,
+                },
+                { merge: true },
+            );
+        revalidatePath('/admin/settings');
+        return { ok: true };
+    } catch (e: unknown) {
+        return { error: (e as Error).message };
+    }
+}

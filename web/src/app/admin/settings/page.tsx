@@ -3,6 +3,7 @@ import { COLLECTIONS, SETTINGS_DOCS } from '@ljeducare/shared';
 import BankDetailsForm from '@/components/admin/settings/BankDetailsForm';
 import CurrencySettingsForm from '@/components/admin/settings/CurrencySettingsForm';
 import KioskDevicesCard from '@/components/admin/settings/KioskDevicesCard';
+import MarketplaceConnectionForm from '@/components/admin/settings/MarketplaceConnectionForm';
 import NotificationSettingsForm from '@/components/admin/settings/NotificationSettingsForm';
 import { requirePermission } from '@/lib/auth/session';
 import { getCurrencySettings } from '@/lib/data/currencies';
@@ -13,13 +14,21 @@ export const dynamic = 'force-dynamic';
 export default async function AdminSettingsPage() {
     await requirePermission('settings'); // main_admin only (MAIN_ADMIN_ONLY)
 
-    const [currencies, gatewaysDoc, notifDoc] = await Promise.all([
+    const [currencies, gatewaysDoc, notifDoc, connectorDoc] = await Promise.all([
         getCurrencySettings(),
         adminDb().doc(`${COLLECTIONS.SETTINGS}/${SETTINGS_DOCS.GATEWAYS}`).get(),
         adminDb().doc(`${COLLECTIONS.SETTINGS}/${SETTINGS_DOCS.NOTIFICATIONS}`).get(),
+        adminDb().doc(`${COLLECTIONS.SETTINGS}/connector`).get(),
     ]);
     const bank = gatewaysDoc.data()?.bankDetails ?? {};
     const notifications = (notifDoc.data() as NotificationSettings) ?? {};
+    // Only whether a key exists ever reaches the client — never the key itself.
+    const connector = connectorDoc.data() ?? {};
+    const marketplace = {
+        configured: typeof connector.hubKey === 'string' && connector.hubKey.length > 0,
+        enabled: connector.enabled !== false,
+        updatedAt: (connector.updatedAt as string) ?? null,
+    };
 
     return (
         <div className="space-y-6">
@@ -29,6 +38,7 @@ export default async function AdminSettingsPage() {
                 <BankDetailsForm initial={bank} />
                 <NotificationSettingsForm settings={notifications} />
                 <KioskDevicesCard />
+                <MarketplaceConnectionForm initial={marketplace} />
                 <section className="card space-y-1 text-sm">
                     <h2 className="font-semibold">Payment gateways</h2>
                     <p className="text-light-subtle dark:text-dark-subtle">
