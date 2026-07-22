@@ -5,17 +5,31 @@ import { useRouter } from 'next/navigation';
 import type { StaffMember } from '@ljeducare/shared';
 import { removeStaffAction, setCommissionAction } from '@/app/admin/staff/actions';
 
-/** Teacher profiles with inline commission editing. */
-export default function StaffProfilesTable({ staff }: { staff: StaffMember[] }) {
+const ROLE_LABEL: Record<string, string> = {
+    teacher: 'Teacher',
+    teacher_admin: 'Teacher Admin',
+    manager: 'Manager',
+};
+
+/** Staff profiles (teachers, teacher admins, managers) with inline commission editing. */
+export default function StaffProfilesTable({
+    staff,
+    roleByUserId = {},
+}: {
+    staff: StaffMember[];
+    /** Account role per linked user, so a manager isn't shown as a plain teacher. */
+    roleByUserId?: Record<string, string>;
+}) {
     if (!staff.length) {
-        return <p className="card text-sm text-light-subtle dark:text-dark-subtle">No teacher profiles yet.</p>;
+        return <p className="card text-sm text-light-subtle dark:text-dark-subtle">No staff profiles yet.</p>;
     }
     return (
         <div className="card overflow-x-auto p-0">
             <table className="w-full text-sm">
                 <thead>
                     <tr className="border-b border-light-border text-left dark:border-dark-border">
-                        <th className="p-3">Teacher</th>
+                        <th className="p-3">Name</th>
+                        <th className="p-3">Role</th>
                         <th className="p-3">Subjects</th>
                         <th className="p-3">Commission %</th>
                         <th className="p-3">Cash balance (LKR)</th>
@@ -25,7 +39,11 @@ export default function StaffProfilesTable({ staff }: { staff: StaffMember[] }) 
                 </thead>
                 <tbody>
                     {staff.map((s) => (
-                        <ProfileRow key={s.id} member={s} />
+                        <ProfileRow
+                            key={s.id}
+                            member={s}
+                            role={(s.userId && roleByUserId[s.userId]) || ''}
+                        />
                     ))}
                 </tbody>
             </table>
@@ -33,7 +51,7 @@ export default function StaffProfilesTable({ staff }: { staff: StaffMember[] }) 
     );
 }
 
-function ProfileRow({ member }: { member: StaffMember }) {
+function ProfileRow({ member, role }: { member: StaffMember; role: string }) {
     const router = useRouter();
     const [pending, startTransition] = useTransition();
     const [removing, startRemoving] = useTransition();
@@ -64,6 +82,11 @@ function ProfileRow({ member }: { member: StaffMember }) {
     return (
         <tr className="border-b border-light-border dark:border-dark-border">
             <td className="p-3 font-medium">{member.name}</td>
+            <td className="p-3">
+                <span className="rounded-full bg-light-background px-2 py-0.5 text-xs font-medium text-light-subtle dark:bg-dark-background dark:text-dark-subtle">
+                    {ROLE_LABEL[role] ?? 'No account'}
+                </span>
+            </td>
             <td className="p-3 text-light-subtle dark:text-dark-subtle">{member.subjects.join(', ') || '—'}</td>
             <td className="p-3">
                 <span className="flex items-center gap-2">

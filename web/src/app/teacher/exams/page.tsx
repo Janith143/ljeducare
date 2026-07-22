@@ -1,5 +1,5 @@
 import type { User } from '@ljeducare/shared';
-import { COLLECTIONS } from '@ljeducare/shared';
+import { COLLECTIONS, TEACHING_ROLES } from '@ljeducare/shared';
 import ExamResultsManager, { type ClassOption } from '@/components/teacher/ExamResultsManager';
 import { requireRole } from '@/lib/auth/session';
 import { getOwnStaffProfile, listTeacherClasses } from '@/lib/data/teacher';
@@ -8,7 +8,7 @@ import { adminDb } from '@/lib/firebase/admin';
 export const dynamic = 'force-dynamic';
 
 export default async function TeacherExamsPage() {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     const staff = await getOwnStaffProfile(user);
     const classes = await listTeacherClasses(user, staff?.id ?? null);
 

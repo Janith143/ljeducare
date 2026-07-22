@@ -1,7 +1,8 @@
 import { requireRole } from '@/lib/auth/session';
+import { TEACHING_ROLES } from '@ljeducare/shared';
 
 export default async function TeacherOverviewPage() {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     return (
         <div className="space-y-6">
             <h1 className="text-2xl font-bold">Teacher Dashboard</h1>

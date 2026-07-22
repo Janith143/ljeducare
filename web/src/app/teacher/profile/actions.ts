@@ -2,7 +2,7 @@
 
 import { randomUUID } from 'node:crypto';
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { COLLECTIONS, STORAGE_PATHS } from '@ljeducare/shared';
+import { COLLECTIONS, STORAGE_PATHS, TEACHING_ROLES } from '@ljeducare/shared';
 import { requireRole } from '@/lib/auth/session';
 import { ensureStaffProfile } from '@/lib/data/staff';
 import { getOwnStaffProfile } from '@/lib/data/teacher';
@@ -10,7 +10,7 @@ import { adminDb, adminStorage } from '@/lib/firebase/admin';
 
 /** Toggle a teacher's "auto-record to Zoom cloud" preference. */
 export async function setAutoRecordAction(staffId: string, enabled: boolean) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     if (user.role === 'teacher') {
         const staff = await getOwnStaffProfile(user);
         if (!staff || staff.id !== staffId) return { error: 'Not your profile.' };
@@ -46,7 +46,7 @@ const clean = (arr: string[]) => (arr ?? []).map((s) => String(s).trim()).filter
 export async function saveMyTeacherProfileAction(
     input: TeacherProfileInput,
 ): Promise<{ ok?: true; error?: string; slug?: string }> {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     const name = (input.name ?? '').trim();
     if (!name) return { error: 'Your name is required.' };
 
@@ -94,7 +94,7 @@ export async function saveMyTeacherProfileAction(
  * which is publicly readable so it shows on the public teacher page.
  */
 export async function uploadTeacherPhotoAction(formData: FormData): Promise<{ url?: string; error?: string }> {
-    await requireRole('teacher', 'teacher_admin');
+    await requireRole(...TEACHING_ROLES);
     const file = formData.get('file');
     if (!(file instanceof File)) return { error: 'No file provided.' };
     if (!file.type.startsWith('image/')) return { error: 'Please choose an image file.' };

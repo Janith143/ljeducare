@@ -106,9 +106,11 @@ export default function ContentTable({ rows }: { rows: ContentRow[] }) {
                             </td>
                             <td className="p-3 text-right">
                                 <span className="inline-flex items-center gap-3">
-                                    {/* Approve/Reject only make sense while a request is waiting. */}
-                                    {row.approval === 'pending' && (
-                                        <ApprovalButtons kind={row.kind} id={row.id} title={row.title} />
+                                    {/* Offered for every unapproved state, including a plain
+                                        draft — an admin should never have to wait for a
+                                        teacher to press "Submit" before they can act. */}
+                                    {row.approval !== 'approved' && (
+                                        <ApprovalButtons kind={row.kind} id={row.id} title={row.title} status={row.approval} />
                                     )}
                                     <Link href={row.editHref} className="text-xs text-primary hover:underline">
                                         Edit

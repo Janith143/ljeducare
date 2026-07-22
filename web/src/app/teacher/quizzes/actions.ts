@@ -2,7 +2,7 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache';
 import type { Question, Quiz } from '@ljeducare/shared';
-import { COLLECTIONS, slugify } from '@ljeducare/shared';
+import { COLLECTIONS, slugify, TEACHING_ROLES } from '@ljeducare/shared';
 import { requireRole, type SessionUser } from '@/lib/auth/session';
 import { getOwnStaffProfile } from '@/lib/data/teacher';
 import { adminDb } from '@/lib/firebase/admin';
@@ -58,7 +58,7 @@ function validate(input: QuizFormInput): string | null {
 }
 
 export async function saveQuizAction(input: QuizFormInput) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     const error = validate(input);
     if (error) return { error };
 
@@ -110,7 +110,7 @@ export async function saveQuizAction(input: QuizFormInput) {
 }
 
 export async function togglePublishQuizAction(quizId: string, publish: boolean) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     try {
         const { db } = await authorize(user, quizId);
         await db.collection(COLLECTIONS.QUIZZES).doc(quizId).update({ isPublished: publish });
@@ -123,7 +123,7 @@ export async function togglePublishQuizAction(quizId: string, publish: boolean) 
 }
 
 export async function deleteQuizAction(quizId: string) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     try {
         const { db } = await authorize(user, quizId);
         await db.collection(COLLECTIONS.QUIZZES).doc(quizId).update({

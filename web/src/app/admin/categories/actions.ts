@@ -56,6 +56,24 @@ function revalidateStorefront() {
     revalidatePath('/admin/categories');
 }
 
+/**
+ * Build a clean, readable category slug.
+ *
+ * `slugify` appends a random suffix by default, which is right for classes and courses
+ * (two teachers may both title one "Grade 11 Maths") but wrong here: categories are a
+ * small curated set whose slug IS the public URL — /categories/cosmetics, not
+ * /categories/cosmatics-020n. Slugs are immutable once created, so a random one is
+ * permanent. Only disambiguate on a genuine clash, and only against the taken set.
+ */
+function categorySlug(name: string, taken: Set<string>): string {
+    const base = slugify(name, false) || 'category';
+    if (!taken.has(base)) return base;
+    for (let n = 2; n < 100; n += 1) {
+        if (!taken.has(`${base}-${n}`)) return `${base}-${n}`;
+    }
+    return `${base}-${Date.now()}`;
+}
+
 export async function saveCategoryAction(input: CategoryFormInput) {
     await requirePermission('content');
     const name = input.name?.trim();
@@ -75,11 +93,12 @@ export async function saveCategoryAction(input: CategoryFormInput) {
             await db.collection(COLLECTIONS.CATEGORIES).doc(input.id).update(fields);
         } else {
             const existing = await db.collection(COLLECTIONS.CATEGORIES).get();
+            const taken = new Set(existing.docs.map((d) => String(d.data().slug ?? '')));
             const ref = db.collection(COLLECTIONS.CATEGORIES).doc();
             await ref.set({
                 ...fields,
                 id: ref.id,
-                slug: slugify(name),
+                slug: categorySlug(name, taken),
                 order: existing.size,
                 createdAt: new Date().toISOString(),
             });

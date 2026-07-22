@@ -4,6 +4,7 @@ import TeacherProfileEditor from '@/components/teacher/TeacherProfileEditor';
 import ZoomConnectionCard, { type ZoomState } from '@/components/teacher/ZoomConnectionCard';
 import { requireRole } from '@/lib/auth/session';
 import { getOwnStaffProfile } from '@/lib/data/teacher';
+import { TEACHING_ROLES } from '@ljeducare/shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,7 +15,7 @@ type ZoomFields = StaffMember & {
 };
 
 export default async function TeacherProfilePage() {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     const staff = (await getOwnStaffProfile(user)) as ZoomFields | null;
 
     return (

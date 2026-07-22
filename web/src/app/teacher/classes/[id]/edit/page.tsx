@@ -73,6 +73,11 @@ export default async function EditClassPage({
                     endTime: cls.endTime,
                     zoomMeetingId: cls.zoomMeetingId,
                     zoomConnected: !!ownerStaff?.zoomAccountConnected,
+                    // Only a plain teacher reaches this page as the class owner — the
+                    // guard above proves it. Everyone else is managing another
+                    // teacher's class and must not be pointed at /teacher/profile.
+                    viewerIsOwner: !assignsTeacher(user.role),
+                    ownerName: ownerStaff?.name ?? null,
                 }}
             />
         </div>

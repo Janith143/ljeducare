@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath, revalidateTag } from 'next/cache';
-import { COLLECTIONS } from '@ljeducare/shared';
+import { COLLECTIONS, TEACHING_ROLES } from '@ljeducare/shared';
 import { requireRole, type SessionUser } from '@/lib/auth/session';
 import { getOwnStaffProfile } from '@/lib/data/teacher';
 import { adminDb } from '@/lib/firebase/admin';
@@ -22,7 +22,7 @@ export async function saveZoomMeetingAction(
     classId: string,
     meeting: { meetingId: string; startUrl?: string },
 ) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     try {
         const ref = await authorizeClass(user, classId);
         await ref.update({
@@ -40,7 +40,7 @@ export async function saveZoomMeetingAction(
 
 /** Detach the Zoom meeting from a class. */
 export async function clearZoomMeetingAction(classId: string) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     try {
         const ref = await authorizeClass(user, classId);
         const { FieldValue } = await import('firebase-admin/firestore');

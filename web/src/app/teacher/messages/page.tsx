@@ -1,5 +1,5 @@
 import type { NotificationSettings } from '@ljeducare/shared';
-import { COLLECTIONS, SETTINGS_DOCS, channelsFor } from '@ljeducare/shared';
+import { COLLECTIONS, SETTINGS_DOCS, channelsFor, TEACHING_ROLES } from '@ljeducare/shared';
 import TeacherMessageForm from '@/components/teacher/TeacherMessageForm';
 import { requireRole } from '@/lib/auth/session';
 import { getOwnStaffProfile, listTeacherClasses } from '@/lib/data/teacher';
@@ -11,7 +11,7 @@ export const metadata = { title: 'Message students' };
 
 /** Teacher → their own enrolled students. Recipients are re-derived server-side in the callable. */
 export default async function TeacherMessagesPage() {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     const staff = await getOwnStaffProfile(user);
     const [classes, notifDoc] = await Promise.all([
         listTeacherClasses(user, staff?.id ?? null),

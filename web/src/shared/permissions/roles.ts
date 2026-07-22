@@ -29,6 +29,23 @@ export const ADMIN_AREA_ROLES: Role[] = ['main_admin', 'manager', 'teacher_admin
  */
 export const TEACHER_AREA_ROLES: Role[] = ['teacher', 'teacher_admin', 'main_admin', 'manager'];
 
+/**
+ * Roles that own a `staff` profile: they may be assigned as the teacher of a class or
+ * course, they earn a commission on its sales, and they get the personal teaching pages
+ * (own profile, earnings, students, attendance, messaging).
+ *
+ * Managers and teacher admins teach alongside their admin duties, so they belong here —
+ * without a staff profile there is nothing to attach a commission rate or earnings to.
+ * main_admin is deliberately excluded: the platform owner is not a revenue-sharing
+ * teacher. If they also teach, give them a separate teaching account.
+ */
+export const TEACHING_ROLES: Role[] = ['teacher', 'teacher_admin', 'manager'];
+
+/** Does this role own a staff profile (and therefore a commission rate)? */
+export function isTeachingRole(role: unknown): boolean {
+    return typeof role === 'string' && (TEACHING_ROLES as string[]).includes(role);
+}
+
 export function isRole(value: unknown): value is Role {
     return typeof value === 'string' && (ALL_ROLES as string[]).includes(value);
 }

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import type { Permission, Role } from '@ljeducare/shared';
-import { ALL_PERMISSIONS, COLLECTIONS, MAIN_ADMIN_ONLY } from '@ljeducare/shared';
+import { ALL_PERMISSIONS, COLLECTIONS, MAIN_ADMIN_ONLY, isTeachingRole } from '@ljeducare/shared';
 import { requirePermission, requireRole } from '@/lib/auth/session';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { ensureStaffProfile } from '@/lib/data/staff';
@@ -79,8 +79,10 @@ export async function updateUserAccessAction(uid: string, role: Role, perms: Per
 
     const update: Record<string, unknown> = { role, permissions: cleanPerms };
 
-    // Promoting to a teaching role → make sure a staff profile exists.
-    if ((role === 'teacher' || role === 'teacher_admin') && !data.staffId) {
+    // Promoting to a teaching role → make sure a staff profile exists, so the account
+    // shows up under Staff with a commission rate. Managers and teacher admins teach
+    // too, so they get one as well (see TEACHING_ROLES).
+    if (isTeachingRole(role) && !data.staffId) {
         const name = `${data.firstName ?? ''} ${data.lastName ?? ''}`.trim() || (data.email ?? 'Teacher');
         update.staffId = await ensureStaffProfile(uid, { name, email: data.email ?? '' });
     }

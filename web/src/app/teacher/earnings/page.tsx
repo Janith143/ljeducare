@@ -1,4 +1,4 @@
-import { formatCurrencyCompact } from '@ljeducare/shared';
+import { formatCurrencyCompact, TEACHING_ROLES } from '@ljeducare/shared';
 import { requireRole } from '@/lib/auth/session';
 import {
     computeUnsettledCommission,
@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
 const lkr = (amount: number) => formatCurrencyCompact({ amount, currency: 'LKR' });
 
 export default async function TeacherEarningsPage() {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     const staff = await getOwnStaffProfile(user);
 
     if (!staff) {

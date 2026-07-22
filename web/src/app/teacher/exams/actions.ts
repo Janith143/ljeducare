@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import type { ExamResult, LiveClass } from '@ljeducare/shared';
-import { COLLECTIONS } from '@ljeducare/shared';
+import { COLLECTIONS, TEACHING_ROLES } from '@ljeducare/shared';
 import { requireRole, type SessionUser } from '@/lib/auth/session';
 import { getOwnStaffProfile } from '@/lib/data/teacher';
 import { adminDb } from '@/lib/firebase/admin';
@@ -30,7 +30,7 @@ async function authorizeClass(user: SessionUser, classId: string) {
 
 /** Create or update a categorized exam result on a class (ported ExamResult model). */
 export async function saveExamResultAction(input: ExamResultInput) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     if (!input.name.trim()) return { error: 'Exam name is required.' };
     if (!input.category.trim()) return { error: 'Category is required (e.g. Model Papers).' };
     if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date)) return { error: 'Valid date is required.' };
@@ -71,7 +71,7 @@ export async function saveExamResultAction(input: ExamResultInput) {
 }
 
 export async function deleteExamResultAction(classId: string, examId: string) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     try {
         const { db, cls } = await authorizeClass(user, classId);
         await db.collection(COLLECTIONS.CLASSES).doc(cls.id).update({

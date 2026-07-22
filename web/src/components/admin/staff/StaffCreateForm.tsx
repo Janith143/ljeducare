@@ -2,12 +2,13 @@
 
 import { useState, useTransition } from 'react';
 import type { Role } from '@ljeducare/shared';
+import { isTeachingRole } from '@ljeducare/shared';
 import { createStaffAction } from '@/app/admin/staff/actions';
 
 const ROLE_OPTIONS: { value: Role; label: string; hint: string }[] = [
     { value: 'teacher', label: 'Teacher', hint: 'Teaches classes/courses; has a public bio page.' },
     { value: 'teacher_admin', label: 'Teacher Admin', hint: 'Teacher + manages other teachers and their content.' },
-    { value: 'manager', label: 'Manager', hint: 'Day-to-day operations; no settings or staff control.' },
+    { value: 'manager', label: 'Manager', hint: 'Day-to-day operations, and may teach their own classes.' },
 ];
 
 export default function StaffCreateForm() {
@@ -37,7 +38,8 @@ export default function StaffCreateForm() {
         });
     }
 
-    const teaching = role === 'teacher' || role === 'teacher_admin';
+    // Managers teach too, so they also get a staff profile and a commission rate.
+    const teaching = isTeachingRole(role);
 
     return (
         <form onSubmit={handleSubmit} className="card space-y-3">

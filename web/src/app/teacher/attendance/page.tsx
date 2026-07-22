@@ -1,11 +1,12 @@
 import AttendanceMarker, { type ClassOption } from '@/components/attendance/AttendanceMarker';
 import { requireRole } from '@/lib/auth/session';
 import { getOwnStaffProfile, listTeacherClasses } from '@/lib/data/teacher';
+import { TEACHING_ROLES } from '@ljeducare/shared';
 
 export const dynamic = 'force-dynamic';
 
 export default async function TeacherAttendancePage() {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     const staff = await getOwnStaffProfile(user);
     const classes = await listTeacherClasses(user, staff?.id ?? null);
 

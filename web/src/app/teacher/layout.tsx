@@ -1,3 +1,4 @@
+import { isTeachingRole } from '@ljeducare/shared';
 import DashboardShell from '@/components/layout/DashboardShell';
 import { requireRole } from '@/lib/auth/session';
 import { CONTENT_ROLES } from '@/lib/auth/contentRoles';
@@ -27,10 +28,11 @@ export default async function TeacherLayout({ children }: { children: React.Reac
     // Admins and managers work in here too — they create and manage classes/courses
     // on behalf of teachers (see lib/auth/contentRoles.ts).
     const user = await requireRole(...CONTENT_ROLES);
-    // ...but ONLY those two pages. The rest of the teaching area is personal to a
-    // teacher (earnings, profile, own students/attendance) and stays teacher-gated,
-    // so showing an admin the full nav would just be a list of 404s.
-    const isTeaching = user.role === 'teacher' || user.role === 'teacher_admin';
+    // ...but main_admin gets ONLY those two pages. The rest of the teaching area is
+    // personal to a staff profile (earnings, profile, own students/attendance), which
+    // main_admin does not have — showing them the full nav is just a list of 404s.
+    // Managers and teacher admins DO have one, so they see everything.
+    const isTeaching = isTeachingRole(user.role);
     const nav = isTeaching
         ? NAV
         : [

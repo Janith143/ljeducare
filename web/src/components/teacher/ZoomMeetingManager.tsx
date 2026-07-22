@@ -14,6 +14,15 @@ export interface ZoomMeetingInfo {
     endTime: string;
     zoomMeetingId?: string;
     zoomConnected: boolean;
+    /**
+     * False when an admin/manager is editing someone else's class. Zoom is connected
+     * per teacher via OAuth on their own profile, so an admin can neither use the
+     * "your Profile" link (it is teacher-gated and 404s) nor act on the teacher's
+     * behalf — they get told who has to do it instead.
+     */
+    viewerIsOwner: boolean;
+    /** The owning teacher's name, shown to non-owners. */
+    ownerName?: string | null;
 }
 
 /** Create/refresh (or detach) a Zoom meeting for a class. */
@@ -26,7 +35,11 @@ export default function ZoomMeetingManager({ info }: { info: ZoomMeetingInfo }) 
     function createMeeting() {
         const staffId = info.staffId;
         if (!staffId) {
-            setError('No teaching profile linked to your account.');
+            setError(
+                info.viewerIsOwner
+                    ? 'No teaching profile linked to your account.'
+                    : 'This class has no teacher assigned, so there is no Zoom account to host it.',
+            );
             return;
         }
         startTransition(async () => {
@@ -68,7 +81,18 @@ export default function ZoomMeetingManager({ info }: { info: ZoomMeetingInfo }) 
             <h2 className="font-semibold">Zoom meeting</h2>
             {!info.zoomConnected && (
                 <p className="rounded-lg bg-amber-50 p-2 text-sm text-amber-800 dark:bg-amber-950 dark:text-amber-300">
-                    Connect your Zoom account in your <a href="/teacher/profile" className="underline">Profile</a> to host this class on Zoom.
+                    {info.viewerIsOwner ? (
+                        <>
+                            Connect your Zoom account in your{' '}
+                            <a href="/teacher/profile" className="underline">Profile</a> to host this class on Zoom.
+                        </>
+                    ) : (
+                        <>
+                            {info.ownerName ? `${info.ownerName} has` : 'This class’s teacher has'} not connected a
+                            Zoom account yet, so this class cannot be hosted on Zoom. Only they can connect it, from
+                            their own profile.
+                        </>
+                    )}
                 </p>
             )}
             {error && <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}

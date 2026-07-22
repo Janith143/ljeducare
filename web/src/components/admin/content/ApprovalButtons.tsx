@@ -2,17 +2,27 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import type { ApprovalStatus } from '@ljeducare/shared';
 import { approveContentAction, rejectContentAction } from '@/app/admin/content/actions';
 
-/** Approve / request-changes for a submitted class or course. */
+/**
+ * Approve / request-changes for a class or course.
+ *
+ * Approval is offered from ANY unapproved state, not just 'pending': an admin holding
+ * the `content` permission is the authority here, and requiring a teacher to press
+ * "Submit for approval" first left drafts with no admin action available at all.
+ * "Request changes" stays pending-only — there is no request to answer otherwise.
+ */
 export default function ApprovalButtons({
     kind,
     id,
     title,
+    status,
 }: {
     kind: 'class' | 'course' | 'quiz';
     id: string;
     title: string;
+    status: ApprovalStatus;
 }) {
     const router = useRouter();
     const [busy, setBusy] = useState(false);
@@ -45,11 +55,13 @@ export default function ApprovalButtons({
         <span className="inline-flex items-center gap-2">
             {error && <span className="text-xs text-red-600">{error}</span>}
             <button type="button" onClick={approve} disabled={busy} className="btn-primary px-2 py-1 text-xs disabled:opacity-50">
-                {busy ? '…' : 'Approve'}
+                {busy ? '…' : 'Approve & publish'}
             </button>
-            <button type="button" onClick={reject} disabled={busy} className="text-xs font-medium text-amber-700 hover:underline disabled:opacity-50 dark:text-amber-400">
-                Request changes
-            </button>
+            {status === 'pending' && (
+                <button type="button" onClick={reject} disabled={busy} className="text-xs font-medium text-amber-700 hover:underline disabled:opacity-50 dark:text-amber-400">
+                    Request changes
+                </button>
+            )}
         </span>
     );
 }

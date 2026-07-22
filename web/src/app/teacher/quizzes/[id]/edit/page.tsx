@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import type { Quiz } from '@ljeducare/shared';
-import { COLLECTIONS } from '@ljeducare/shared';
+import { COLLECTIONS, TEACHING_ROLES } from '@ljeducare/shared';
 import QuizForm from '@/components/teacher/QuizForm';
 import { requireRole } from '@/lib/auth/session';
 import { getOwnStaffProfile } from '@/lib/data/teacher';
@@ -14,7 +14,7 @@ export default async function EditQuizPage({
 }: {
     params: Promise<{ id: string }>;
 }) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...TEACHING_ROLES);
     const { id } = await params;
 
     const doc = await adminDb().collection(COLLECTIONS.QUIZZES).doc(id).get();

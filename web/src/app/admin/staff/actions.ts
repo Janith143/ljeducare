@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import type { Role } from '@ljeducare/shared';
-import { COLLECTIONS } from '@ljeducare/shared';
+import { COLLECTIONS, isTeachingRole } from '@ljeducare/shared';
 import { adminAuth, adminDb } from '@/lib/firebase/admin';
 import { requirePermission } from '@/lib/auth/session';
 import { ensureStaffProfile } from '@/lib/data/staff';
@@ -33,8 +33,7 @@ export async function createStaffAction(input: CreateStaffInput) {
         const email = input.email.trim().toLowerCase();
         const user = await adminAuth().createUser({ email, password: input.password, displayName: name });
 
-        const isTeaching = input.role === 'teacher' || input.role === 'teacher_admin';
-        const staffId = isTeaching
+        const staffId = isTeachingRole(input.role)
             ? await ensureStaffProfile(user.uid, {
                   name,
                   email,
