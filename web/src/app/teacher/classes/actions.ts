@@ -2,13 +2,16 @@
 
 import { revalidatePath, revalidateTag } from 'next/cache';
 import type { LiveClass } from '@ljeducare/shared';
-import { COLLECTIONS, slugify } from '@ljeducare/shared';
+import { COLLECTIONS, approvalOf, canPublish, canSubmit, slugify } from '@ljeducare/shared';
 import { requireRole, type SessionUser } from '@/lib/auth/session';
+import { CONTENT_ROLES, assignsTeacher, autoApproved } from '@/lib/auth/contentRoles';
 import { getOwnStaffProfile } from '@/lib/data/teacher';
 import { adminDb } from '@/lib/firebase/admin';
 
 export interface ClassFormInput {
     id?: string;
+    /** Staff id the class belongs to — required when the creator isn't a teacher. */
+    teacherId?: string;
     title: string;
     subject: string;
     description: string;
@@ -36,14 +39,17 @@ async function authorize(user: SessionUser, existingId?: string) {
     const staff = await getOwnStaffProfile(user);
     const staffId = staff?.id ?? null;
     const db = adminDb();
+    // teacher_admin / main_admin / manager oversee everyone's content; a plain teacher
+    // is limited to their own.
+    const managesAll = assignsTeacher(user.role);
     if (existingId) {
         const doc = await db.collection(COLLECTIONS.CLASSES).doc(existingId).get();
         if (!doc.exists) throw new Error('Class not found.');
         const owner = doc.data()!.teacherId;
-        if (user.role !== 'teacher_admin' && owner !== staffId) throw new Error('Not your class.');
+        if (!managesAll && owner !== staffId) throw new Error('Not your class.');
         return { db, staffId, existing: { ...(doc.data() as LiveClass), id: doc.id } };
     }
-    if (user.role !== 'teacher_admin' && !staffId) {
+    if (!managesAll && !staffId) {
         throw new Error('No staff profile linked to your account — ask an admin.');
     }
     return { db, staffId, existing: null };
@@ -60,7 +66,7 @@ function validate(input: ClassFormInput): string | null {
 }
 
 export async function saveClassAction(input: ClassFormInput) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...CONTENT_ROLES);
     const error = validate(input);
     if (error) return { error };
 
@@ -102,17 +108,27 @@ export async function saveClassAction(input: ClassFormInput) {
         };
 
         if (existing) {
-            await db.collection(COLLECTIONS.CLASSES).doc(existing.id).update(fields);
+            // Admins/managers may also reassign an existing class to another teacher.
+            const reassign = assignsTeacher(user.role) && input.teacherId ? { teacherId: input.teacherId } : {};
+            await db.collection(COLLECTIONS.CLASSES).doc(existing.id).update({ ...fields, ...reassign });
         } else {
+            // A plain teacher owns what they create; anyone else must nominate a teacher,
+            // otherwise the class would be orphaned (no byline, outside the cascade).
+            const owner = assignsTeacher(user.role) ? (input.teacherId ?? '').trim() : staffId;
+            if (!owner) throw new Error('Choose the teacher this class belongs to.');
+
             const ref = db.collection(COLLECTIONS.CLASSES).doc();
             await ref.set({
                 ...fields,
                 id: ref.id,
                 slug: slugify(input.title),
-                teacherId: staffId,
+                teacherId: owner,
                 status: 'scheduled',
                 isPublished: false,
-                adminApproval: 'not_requested',
+                adminApproval: autoApproved(user.role) ? 'approved' : 'not_requested',
+                ...(autoApproved(user.role)
+                    ? { approvedAt: new Date().toISOString(), approvedBy: user.uid }
+                    : {}),
                 createdAt: new Date().toISOString(),
             });
         }
@@ -126,10 +142,21 @@ export async function saveClassAction(input: ClassFormInput) {
 }
 
 export async function togglePublishClassAction(classId: string, publish: boolean) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...CONTENT_ROLES);
     try {
         const { db } = await authorize(user, classId);
-        await db.collection(COLLECTIONS.CLASSES).doc(classId).update({ isPublished: publish });
+        const ref = db.collection(COLLECTIONS.CLASSES).doc(classId);
+
+        // Going live needs admin approval. Unpublishing is always allowed, so a
+        // teacher can pull their own class down without waiting for anyone.
+        if (publish) {
+            const snap = await ref.get();
+            if (!canPublish(snap.data()?.adminApproval)) {
+                return { error: 'This class needs admin approval before it can go live.' };
+            }
+        }
+
+        await ref.update({ isPublished: publish });
         revalidateTag('classes');
         revalidatePath('/teacher/classes');
         return { ok: true };
@@ -138,9 +165,51 @@ export async function togglePublishClassAction(classId: string, publish: boolean
     }
 }
 
+/** Teacher asks an admin to review the class (draft/rejected → pending). */
+export async function submitClassForApprovalAction(classId: string) {
+    const user = await requireRole(...CONTENT_ROLES);
+    try {
+        const { db } = await authorize(user, classId);
+        const ref = db.collection(COLLECTIONS.CLASSES).doc(classId);
+        const snap = await ref.get();
+        if (!snap.exists) return { error: 'Class not found.' };
+        if (!canSubmit(snap.data()?.adminApproval)) {
+            return { error: 'This class is already submitted or approved.' };
+        }
+        await ref.update({
+            adminApproval: 'pending',
+            submittedForApprovalAt: new Date().toISOString(),
+            approvalNote: null,
+        });
+        revalidatePath('/teacher/classes');
+        revalidatePath('/admin/content');
+        return { ok: true };
+    } catch (e: unknown) {
+        return { error: (e as Error).message };
+    }
+}
+
+/** Teacher pulls a pending request back to draft. */
+export async function withdrawClassApprovalAction(classId: string) {
+    const user = await requireRole(...CONTENT_ROLES);
+    try {
+        const { db } = await authorize(user, classId);
+        const ref = db.collection(COLLECTIONS.CLASSES).doc(classId);
+        if (approvalOf((await ref.get()).data()?.adminApproval) !== 'pending') {
+            return { error: 'Only a pending request can be withdrawn.' };
+        }
+        await ref.update({ adminApproval: 'not_requested' });
+        revalidatePath('/teacher/classes');
+        revalidatePath('/admin/content');
+        return { ok: true };
+    } catch (e: unknown) {
+        return { error: (e as Error).message };
+    }
+}
+
 /** Soft delete → recycle bin (ported source pattern). */
 export async function deleteClassAction(classId: string) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...CONTENT_ROLES);
     try {
         const { db } = await authorize(user, classId);
         await db.collection(COLLECTIONS.CLASSES).doc(classId).update({

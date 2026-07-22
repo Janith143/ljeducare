@@ -4,8 +4,20 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { LiveClass } from '@ljeducare/shared';
-import { formatCurrencyCompact } from '@ljeducare/shared';
-import { deleteClassAction, togglePublishClassAction } from '@/app/teacher/classes/actions';
+import {
+    APPROVAL_LABEL,
+    APPROVAL_STYLE,
+    approvalOf,
+    canPublish,
+    canSubmit,
+    formatCurrencyCompact,
+} from '@ljeducare/shared';
+import {
+    deleteClassAction,
+    submitClassForApprovalAction,
+    togglePublishClassAction,
+    withdrawClassApprovalAction,
+} from '@/app/teacher/classes/actions';
 
 export default function ClassListTable({ classes }: { classes: LiveClass[] }) {
     if (!classes.length) {
@@ -23,6 +35,7 @@ export default function ClassListTable({ classes }: { classes: LiveClass[] }) {
                         <th className="p-3">Class</th>
                         <th className="p-3">Schedule</th>
                         <th className="p-3">Fee</th>
+                        <th className="p-3">Approval</th>
                         <th className="p-3">Status</th>
                         <th className="p-3" />
                     </tr>
@@ -51,6 +64,9 @@ function Row({ cls }: { cls: LiveClass }) {
         });
     }
 
+    const approval = approvalOf(cls.adminApproval);
+    const note = (cls as { approvalNote?: string }).approvalNote;
+
     return (
         <tr className="border-b border-light-border dark:border-dark-border">
             <td className="p-3">
@@ -69,6 +85,14 @@ function Row({ cls }: { cls: LiveClass }) {
                     : formatCurrencyCompact({ amount: cls.pricing.basePrice, currency: 'LKR' })}
             </td>
             <td className="p-3">
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${APPROVAL_STYLE[approval]}`}>
+                    {APPROVAL_LABEL[approval]}
+                </span>
+                {approval === 'rejected' && note && (
+                    <span className="mt-1 block max-w-[14rem] text-xs text-red-600">{note}</span>
+                )}
+            </td>
+            <td className="p-3">
                 <span
                     className={`rounded-full px-2 py-0.5 text-xs font-medium ${
                         cls.isPublished
@@ -83,14 +107,37 @@ function Row({ cls }: { cls: LiveClass }) {
                 <Link href={`/teacher/classes/${cls.id}/edit`} className="btn-secondary px-2 py-1 text-xs">
                     Edit
                 </Link>
-                <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => run(() => togglePublishClassAction(cls.id, !cls.isPublished))}
-                    className="btn-secondary px-2 py-1 text-xs"
-                >
-                    {cls.isPublished ? 'Unpublish' : 'Publish'}
-                </button>
+                {/* Publishing is gated on approval: submit first, then the toggle unlocks. */}
+                {canSubmit(approval) && (
+                    <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => run(() => submitClassForApprovalAction(cls.id))}
+                        className="btn-secondary px-2 py-1 text-xs"
+                    >
+                        {approval === 'rejected' ? 'Resubmit' : 'Submit for approval'}
+                    </button>
+                )}
+                {approval === 'pending' && (
+                    <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => run(() => withdrawClassApprovalAction(cls.id))}
+                        className="btn-secondary px-2 py-1 text-xs"
+                    >
+                        Withdraw
+                    </button>
+                )}
+                {canPublish(approval) && (
+                    <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => run(() => togglePublishClassAction(cls.id, !cls.isPublished))}
+                        className="btn-secondary px-2 py-1 text-xs"
+                    >
+                        {cls.isPublished ? 'Unpublish' : 'Publish'}
+                    </button>
+                )}
                 <button
                     type="button"
                     disabled={pending}

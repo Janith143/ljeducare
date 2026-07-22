@@ -25,11 +25,11 @@ export async function getOwnStaffProfile(user: SessionUser): Promise<StaffMember
     return { ...(doc.data() as StaffMember), id: doc.id };
 }
 
-/** Classes this teacher may manage: own for teachers, all for teacher_admins. */
+/** Classes this user may manage: own for teachers, all for teacher_admin/admin/manager. */
 export async function listTeacherClasses(user: SessionUser, staffId: string | null): Promise<LiveClass[]> {
     const db = adminDb();
     const query =
-        user.role === 'teacher_admin'
+        user.role !== 'teacher'
             ? db.collection(COLLECTIONS.CLASSES)
             : db.collection(COLLECTIONS.CLASSES).where('teacherId', '==', staffId ?? '__none__');
     const snap = await query.get();
@@ -39,11 +39,11 @@ export async function listTeacherClasses(user: SessionUser, staffId: string | nu
         .sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
 }
 
-/** Courses this teacher may manage (same scoping as classes). */
+/** Courses this user may manage (same scoping as classes). */
 export async function listTeacherCourses(user: SessionUser, staffId: string | null): Promise<Course[]> {
     const db = adminDb();
     const query =
-        user.role === 'teacher_admin'
+        user.role !== 'teacher'
             ? db.collection(COLLECTIONS.COURSES)
             : db.collection(COLLECTIONS.COURSES).where('teacherId', '==', staffId ?? '__none__');
     const snap = await query.get();

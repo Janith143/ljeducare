@@ -1,5 +1,14 @@
 import Link from 'next/link';
-import { formatCurrencyCompact, type Course, type LiveClass } from '@ljeducare/shared';
+import {
+    APPROVAL_LABEL,
+    APPROVAL_STYLE,
+    approvalOf,
+    formatCurrencyCompact,
+    type ApprovalStatus,
+    type Course,
+    type LiveClass,
+} from '@ljeducare/shared';
+import ApprovalButtons from './ApprovalButtons';
 import DeleteContentButton from './DeleteContentButton';
 
 export type ContentRow = {
@@ -9,6 +18,7 @@ export type ContentRow = {
     subject: string;
     teacherName: string;
     isPublished: boolean;
+    approval: ApprovalStatus;
     price: number;
     isFree: boolean;
     href: string;
@@ -28,6 +38,7 @@ export function toRows(
             subject: c.subject,
             teacherName: name(c.teacherId),
             isPublished: !!c.isPublished,
+            approval: approvalOf(c.adminApproval),
             price: c.pricing?.basePrice ?? 0,
             isFree: !!c.pricing?.isFree || !(c.pricing?.basePrice > 0),
             href: `/classes/${c.slug}`,
@@ -39,6 +50,7 @@ export function toRows(
             subject: c.subject,
             teacherName: name(c.teacherId),
             isPublished: !!c.isPublished,
+            approval: approvalOf(c.adminApproval),
             price: c.pricing?.basePrice ?? 0,
             isFree: !!c.pricing?.isFree || !(c.pricing?.basePrice > 0),
             href: `/courses/${c.slug}`,
@@ -60,6 +72,7 @@ export default function ContentTable({ rows }: { rows: ContentRow[] }) {
                         <th className="p-3">Type</th>
                         <th className="p-3">Teacher</th>
                         <th className="p-3">Fee</th>
+                        <th className="p-3">Approval</th>
                         <th className="p-3">Status</th>
                         <th className="p-3" />
                     </tr>
@@ -77,12 +90,21 @@ export default function ContentTable({ rows }: { rows: ContentRow[] }) {
                                 {row.isFree ? 'Free' : formatCurrencyCompact({ amount: row.price, currency: 'LKR' })}
                             </td>
                             <td className="p-3">
+                                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${APPROVAL_STYLE[row.approval]}`}>
+                                    {APPROVAL_LABEL[row.approval]}
+                                </span>
+                            </td>
+                            <td className="p-3">
                                 <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${row.isPublished ? 'bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300'}`}>
                                     {row.isPublished ? 'Published' : 'Draft'}
                                 </span>
                             </td>
                             <td className="p-3 text-right">
                                 <span className="inline-flex items-center gap-3">
+                                    {/* Approve/Reject only make sense while a request is waiting. */}
+                                    {row.approval === 'pending' && (
+                                        <ApprovalButtons kind={row.kind} id={row.id} title={row.title} />
+                                    )}
                                     {row.isPublished && (
                                         <Link href={row.href} className="text-xs text-primary hover:underline">
                                             View public page ↗

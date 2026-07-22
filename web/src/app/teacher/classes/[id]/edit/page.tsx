@@ -6,8 +6,10 @@ import ZoomMeetingManager from '@/components/teacher/ZoomMeetingManager';
 import HomeworkSubmissions from '@/components/teacher/HomeworkSubmissions';
 import type { User } from '@ljeducare/shared';
 import { requireRole } from '@/lib/auth/session';
+import { CONTENT_ROLES, assignsTeacher } from '@/lib/auth/contentRoles';
 import { getOwnStaffProfile } from '@/lib/data/teacher';
 import { listCategories } from '@/lib/data/categories';
+import { listStaff } from '@/lib/data/staff';
 import { adminDb } from '@/lib/firebase/admin';
 
 export const dynamic = 'force-dynamic';
@@ -17,7 +19,7 @@ export default async function EditClassPage({
 }: {
     params: Promise<{ id: string }>;
 }) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    const user = await requireRole(...CONTENT_ROLES);
     const { id } = await params;
 
     const doc = await adminDb().collection(COLLECTIONS.CLASSES).doc(id).get();
@@ -26,7 +28,7 @@ export default async function EditClassPage({
 
     // The owning teacher's staff profile (for the Zoom host + connection state).
     let ownerStaff: StaffMember | null = null;
-    if (user.role !== 'teacher_admin') {
+    if (!assignsTeacher(user.role)) {
         ownerStaff = await getOwnStaffProfile(user);
         if (!ownerStaff || cls.teacherId !== ownerStaff.id) notFound();
     } else if (cls.teacherId) {
@@ -51,11 +53,15 @@ export default async function EditClassPage({
     }
 
     const categories = (await listCategories()).map((c) => ({ slug: c.slug, name: c.name }));
+    // Admins/managers/teacher_admins may (re)assign the owning teacher.
+    const teachers = assignsTeacher(user.role)
+        ? (await listStaff()).map((s) => ({ id: s.id, name: s.name }))
+        : undefined;
 
     return (
         <div className="mx-auto max-w-2xl space-y-6">
             <h1 className="text-2xl font-bold">Edit class</h1>
-            <ClassForm existing={cls} categories={categories} />
+            <ClassForm existing={cls} categories={categories} teachers={teachers} />
             <HomeworkSubmissions submissions={submissions} studentNames={studentNames} />
             <ZoomMeetingManager
                 info={{

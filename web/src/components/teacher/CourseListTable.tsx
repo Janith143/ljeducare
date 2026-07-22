@@ -4,8 +4,20 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import type { Course } from '@ljeducare/shared';
-import { formatCurrencyCompact } from '@ljeducare/shared';
-import { deleteCourseAction, togglePublishCourseAction } from '@/app/teacher/courses/actions';
+import {
+    APPROVAL_LABEL,
+    APPROVAL_STYLE,
+    approvalOf,
+    canPublish,
+    canSubmit,
+    formatCurrencyCompact,
+} from '@ljeducare/shared';
+import {
+    deleteCourseAction,
+    submitCourseForApprovalAction,
+    togglePublishCourseAction,
+    withdrawCourseApprovalAction,
+} from '@/app/teacher/courses/actions';
 
 export default function CourseListTable({ courses }: { courses: Course[] }) {
     if (!courses.length) {
@@ -23,6 +35,7 @@ export default function CourseListTable({ courses }: { courses: Course[] }) {
                         <th className="p-3">Course</th>
                         <th className="p-3">Lessons</th>
                         <th className="p-3">Fee</th>
+                        <th className="p-3">Approval</th>
                         <th className="p-3">Status</th>
                         <th className="p-3" />
                     </tr>
@@ -51,6 +64,9 @@ function Row({ course }: { course: Course }) {
         });
     }
 
+    const approval = approvalOf(course.adminApproval);
+    const note = (course as { approvalNote?: string }).approvalNote;
+
     return (
         <tr className="border-b border-light-border dark:border-dark-border">
             <td className="p-3">
@@ -63,6 +79,14 @@ function Row({ course }: { course: Course }) {
                 {course.pricing?.isFree || !course.pricing?.basePrice
                     ? 'Free'
                     : formatCurrencyCompact({ amount: course.pricing.basePrice, currency: 'LKR' })}
+            </td>
+            <td className="p-3">
+                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${APPROVAL_STYLE[approval]}`}>
+                    {APPROVAL_LABEL[approval]}
+                </span>
+                {approval === 'rejected' && note && (
+                    <span className="mt-1 block max-w-[14rem] text-xs text-red-600">{note}</span>
+                )}
             </td>
             <td className="p-3">
                 <span
@@ -79,14 +103,37 @@ function Row({ course }: { course: Course }) {
                 <Link href={`/teacher/courses/${course.id}/edit`} className="btn-secondary px-2 py-1 text-xs">
                     Edit
                 </Link>
-                <button
-                    type="button"
-                    disabled={pending}
-                    onClick={() => run(() => togglePublishCourseAction(course.id, !course.isPublished))}
-                    className="btn-secondary px-2 py-1 text-xs"
-                >
-                    {course.isPublished ? 'Unpublish' : 'Publish'}
-                </button>
+                {/* Publishing is gated on approval: submit first, then the toggle unlocks. */}
+                {canSubmit(approval) && (
+                    <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => run(() => submitCourseForApprovalAction(course.id))}
+                        className="btn-secondary px-2 py-1 text-xs"
+                    >
+                        {approval === 'rejected' ? 'Resubmit' : 'Submit for approval'}
+                    </button>
+                )}
+                {approval === 'pending' && (
+                    <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => run(() => withdrawCourseApprovalAction(course.id))}
+                        className="btn-secondary px-2 py-1 text-xs"
+                    >
+                        Withdraw
+                    </button>
+                )}
+                {canPublish(approval) && (
+                    <button
+                        type="button"
+                        disabled={pending}
+                        onClick={() => run(() => togglePublishCourseAction(course.id, !course.isPublished))}
+                        className="btn-secondary px-2 py-1 text-xs"
+                    >
+                        {course.isPublished ? 'Unpublish' : 'Publish'}
+                    </button>
+                )}
                 <button
                     type="button"
                     disabled={pending}

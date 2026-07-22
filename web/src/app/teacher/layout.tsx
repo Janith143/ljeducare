@@ -1,5 +1,6 @@
 import DashboardShell from '@/components/layout/DashboardShell';
 import { requireRole } from '@/lib/auth/session';
+import { CONTENT_ROLES } from '@/lib/auth/contentRoles';
 import { AuthProvider } from '@/providers/AuthProvider';
 
 const NAV = [
@@ -15,15 +16,24 @@ const NAV = [
     { href: '/teacher/profile', label: 'Profile' },
 ];
 
+const ROLE_LABEL: Record<string, string> = {
+    teacher: 'Teacher',
+    teacher_admin: 'Teacher Admin',
+    main_admin: 'Main Admin',
+    manager: 'Manager',
+};
+
 export default async function TeacherLayout({ children }: { children: React.ReactNode }) {
-    const user = await requireRole('teacher', 'teacher_admin');
+    // Admins and managers work in here too — they create and manage classes/courses
+    // on behalf of teachers (see lib/auth/contentRoles.ts).
+    const user = await requireRole(...CONTENT_ROLES);
     return (
         <AuthProvider user={user}>
             <DashboardShell
-                title="Teacher"
+                title={user.role === 'teacher' ? 'Teacher' : 'Teaching'}
                 nav={NAV}
                 userName={user.name ?? user.email ?? ''}
-                roleLabel={user.role === 'teacher_admin' ? 'Teacher Admin' : 'Teacher'}
+                roleLabel={ROLE_LABEL[user.role] ?? user.role}
                 uid={user.uid}
             >
                 {children}

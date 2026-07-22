@@ -9,7 +9,21 @@ import CategorySelect, { type CategoryOpt } from '@/components/teacher/CategoryS
 type LectureRow = CourseFormInput['lectures'][number] & { key: string };
 
 /** Create/edit form for a recorded course with an inline lessons editor. */
-export default function CourseForm({ existing, categories = [] }: { existing?: Course; categories?: CategoryOpt[] }) {
+export interface TeacherOpt {
+    id: string;
+    name: string;
+}
+
+export default function CourseForm({
+    existing,
+    categories = [],
+    teachers,
+}: {
+    existing?: Course;
+    categories?: CategoryOpt[];
+    /** Supplied only when the author isn't a teacher — they nominate the owning teacher. */
+    teachers?: TeacherOpt[];
+}) {
     const router = useRouter();
     const [pending, startTransition] = useTransition();
     const [error, setError] = useState<string | null>(null);
@@ -34,6 +48,7 @@ export default function CourseForm({ existing, categories = [] }: { existing?: C
         const f = new FormData(e.currentTarget);
         const input: CourseFormInput = {
             id: existing?.id,
+            ...(teachers ? { teacherId: String(f.get('teacherId') ?? '') } : {}),
             title: String(f.get('title') ?? ''),
             subject: String(f.get('subject') ?? ''),
             description: String(f.get('description') ?? ''),
@@ -66,6 +81,26 @@ export default function CourseForm({ existing, categories = [] }: { existing?: C
 
             <section className="card space-y-3">
                 <h2 className="font-semibold">Course details</h2>
+                {/* Only shown to admins/managers — a teacher always owns what they create. */}
+                {teachers && (
+                    <label className="block">
+                        <span className="mb-1 block text-sm font-medium">Teacher</span>
+                        <select name="teacherId" required defaultValue={existing?.teacherId ?? ''} className="input">
+                            <option value="" disabled>
+                                Choose the teacher…
+                            </option>
+                            {teachers.map((t) => (
+                                <option key={t.id} value={t.id}>
+                                    {t.name}
+                                </option>
+                            ))}
+                        </select>
+                        <span className="mt-1 block text-xs text-light-subtle dark:text-dark-subtle">
+                            Who teaches this course. Shown on the public page and used for their earnings.
+                        </span>
+                    </label>
+                )}
+
                 <input name="title" required placeholder="Course title" defaultValue={existing?.title} className="input" />
                 <div className="grid grid-cols-3 gap-3">
                     <input name="subject" required placeholder="Subject" defaultValue={existing?.subject} className="input" />
