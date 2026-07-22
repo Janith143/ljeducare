@@ -59,7 +59,9 @@ export default function ClassForm({
             const result = await saveClassAction(input);
             if (result.error) setError(result.error);
             else {
-                router.push('/teacher/classes');
+                // `teachers` is only passed to non-teacher authors, so it doubles as the
+                // signal to return them to the admin list (approval + publish live there).
+                router.push(teachers ? '/admin/classes' : '/teacher/classes');
                 router.refresh();
             }
         });

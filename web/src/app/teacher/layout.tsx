@@ -27,11 +27,17 @@ export default async function TeacherLayout({ children }: { children: React.Reac
     // Admins and managers work in here too — they create and manage classes/courses
     // on behalf of teachers (see lib/auth/contentRoles.ts).
     const user = await requireRole(...CONTENT_ROLES);
-    // Admins/managers arrive here from the admin dashboard — give them a way back.
-    const nav =
-        user.role === 'main_admin' || user.role === 'manager'
-            ? [...NAV, { href: '/admin', label: '← Back to Admin' }]
-            : NAV;
+    // ...but ONLY those two pages. The rest of the teaching area is personal to a
+    // teacher (earnings, profile, own students/attendance) and stays teacher-gated,
+    // so showing an admin the full nav would just be a list of 404s.
+    const isTeaching = user.role === 'teacher' || user.role === 'teacher_admin';
+    const nav = isTeaching
+        ? NAV
+        : [
+              { href: '/teacher/classes', label: 'Classes' },
+              { href: '/teacher/courses', label: 'Courses' },
+              { href: '/admin', label: '← Back to Admin' },
+          ];
     return (
         <AuthProvider user={user}>
             <DashboardShell

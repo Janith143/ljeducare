@@ -65,7 +65,8 @@ export default function CourseForm({
             const result = await saveCourseAction(input);
             if (result.error) setError(result.error);
             else {
-                router.push('/teacher/courses');
+                // See ClassForm: `teachers` marks an admin/manager author.
+                router.push(teachers ? '/admin/courses' : '/teacher/courses');
                 router.refresh();
             }
         });
