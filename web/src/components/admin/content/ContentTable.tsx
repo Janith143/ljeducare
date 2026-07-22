@@ -10,6 +10,7 @@ import {
 } from '@ljeducare/shared';
 import ApprovalButtons from './ApprovalButtons';
 import DeleteContentButton from './DeleteContentButton';
+import PublishToggle from './PublishToggle';
 
 export type ContentRow = {
     id: string;
@@ -22,6 +23,8 @@ export type ContentRow = {
     price: number;
     isFree: boolean;
     href: string;
+    /** The teaching-area edit form — admins/managers may edit and reassign here. */
+    editHref: string;
 };
 
 export function toRows(
@@ -42,6 +45,7 @@ export function toRows(
             price: c.pricing?.basePrice ?? 0,
             isFree: !!c.pricing?.isFree || !(c.pricing?.basePrice > 0),
             href: `/classes/${c.slug}`,
+            editHref: `/teacher/classes/${c.id}/edit`,
         })),
         ...courses.map((c) => ({
             id: c.id,
@@ -54,6 +58,7 @@ export function toRows(
             price: c.pricing?.basePrice ?? 0,
             isFree: !!c.pricing?.isFree || !(c.pricing?.basePrice > 0),
             href: `/courses/${c.slug}`,
+            editHref: `/teacher/courses/${c.id}/edit`,
         })),
     ];
 }
@@ -105,9 +110,16 @@ export default function ContentTable({ rows }: { rows: ContentRow[] }) {
                                     {row.approval === 'pending' && (
                                         <ApprovalButtons kind={row.kind} id={row.id} title={row.title} />
                                     )}
+                                    <Link href={row.editHref} className="text-xs text-primary hover:underline">
+                                        Edit
+                                    </Link>
+                                    {/* Only approved items can go live, so hide the toggle otherwise. */}
+                                    {row.approval === 'approved' && (
+                                        <PublishToggle kind={row.kind} id={row.id} isPublished={row.isPublished} />
+                                    )}
                                     {row.isPublished && (
                                         <Link href={row.href} className="text-xs text-primary hover:underline">
-                                            View public page ↗
+                                            View ↗
                                         </Link>
                                     )}
                                     <DeleteContentButton kind={row.kind} id={row.id} title={row.title} />
