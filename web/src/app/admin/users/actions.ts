@@ -43,7 +43,16 @@ export async function setUserStatusAction(uid: string, status: 'active' | 'suspe
         if (status === 'suspended') {
             hidden = await cascadeTeacherContent(staffId, { by: admin.uid, reason: 'suspended' });
         } else {
+            // Staff → Remove soft-deletes the profile as well as suspending the account,
+            // and tells the admin they can "reactivate the account later under Users".
+            // Restoring the content without clearing isDeleted broke that promise: the
+            // person came back but never reappeared under Staff, and nothing else in the
+            // UI can undelete a staff profile (the recycle bin covers content only).
+            await adminDb()
+                .doc(`${COLLECTIONS.STAFF}/${staffId}`)
+                .set({ isDeleted: false, deletedAt: null, deletedBy: null }, { merge: true });
             restored = await restoreTeacherContent(staffId, { by: admin.uid });
+            revalidatePath('/admin/staff');
         }
         revalidatePath('/classes');
         revalidatePath('/courses');
