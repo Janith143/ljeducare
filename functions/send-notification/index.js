@@ -127,7 +127,9 @@ exports.deliverOutboxMessage = onDocumentCreated(
 const { sendBulkMessage } = require('./lib/bulk');
 const { sendTeacherMessage } = require('./lib/teacherMessage');
 const { classReminderTick } = require('./lib/classReminder');
+const { getSmsBalance } = require('./lib/balance');
 
 exports.sendBulkMessage = sendBulkMessage;
 exports.sendTeacherMessage = sendTeacherMessage;
 exports.classReminderTick = classReminderTick;
+exports.getSmsBalance = getSmsBalance;

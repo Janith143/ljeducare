@@ -3,6 +3,7 @@ import { COLLECTIONS, SETTINGS_DOCS } from '@ljeducare/shared';
 import BankDetailsForm from '@/components/admin/settings/BankDetailsForm';
 import CurrencySettingsForm from '@/components/admin/settings/CurrencySettingsForm';
 import KioskDevicesCard from '@/components/admin/settings/KioskDevicesCard';
+import SmsBalanceCard from '@/components/admin/SmsBalanceCard';
 import MarketplaceConnectionForm from '@/components/admin/settings/MarketplaceConnectionForm';
 import NotificationSettingsForm from '@/components/admin/settings/NotificationSettingsForm';
 import { requirePermission } from '@/lib/auth/session';
@@ -39,6 +40,8 @@ export default async function AdminSettingsPage() {
                 <CurrencySettingsForm settings={currencies} />
                 <BankDetailsForm initial={bank} />
                 <NotificationSettingsForm settings={notifications} />
+                {/* Next to the SMS toggles: turning one on is a spending decision. */}
+                <SmsBalanceCard />
                 <KioskDevicesCard />
                 <MarketplaceConnectionForm initial={marketplace} />
                 <section className="card space-y-1 text-sm">

@@ -1,6 +1,7 @@
 import type { LiveClass } from '@ljeducare/shared';
 import { COLLECTIONS } from '@ljeducare/shared';
 import CommunicationsForm from '@/components/admin/communications/CommunicationsForm';
+import SmsBalanceCard from '@/components/admin/SmsBalanceCard';
 import { requirePermission } from '@/lib/auth/session';
 import { adminDb } from '@/lib/firebase/admin';
 
@@ -22,6 +23,10 @@ export default async function AdminCommunicationsPage() {
                 Send an announcement to all students or those enrolled in a specific class. In-app
                 messages appear in each student&apos;s notification bell instantly.
             </p>
+            {/* A broadcast spends one credit per recipient — show the balance BEFORE sending. */}
+            <div className="max-w-md">
+                <SmsBalanceCard />
+            </div>
             <CommunicationsForm classes={classes} />
         </div>
     );
