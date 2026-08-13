@@ -8,10 +8,11 @@ import { formatCurrency, resolvePrice } from '@ljeducare/shared';
 import { useCart } from '@/providers/CartProvider';
 import { callFunction } from '@/lib/firebase/client';
 
-type Method = 'paypal' | 'marx' | 'bank_slip';
+// Card payment (OnePay) is single-item checkout only for now — see CheckoutClient.tsx.
+// Cart checkout offers PayPal (foreign currency) + bank transfer until that lands.
+type Method = 'paypal' | 'bank_slip';
 
 const METHOD_META: Record<Method, { label: string; hint: string }> = {
-    marx: { label: 'Card payment (LKR)', hint: 'Visa/Master via Marx — Sri Lankan cards' },
     paypal: { label: 'PayPal', hint: 'International cards & PayPal balance' },
     bank_slip: { label: 'Bank transfer', hint: 'Pay to the institute account, upload one slip' },
 };
@@ -21,7 +22,7 @@ export default function CartClient({ settings }: { settings: CurrencySettings })
     const router = useRouter();
     const { items, remove } = useCart();
     const [currency, setCurrency] = useState(settings.base);
-    const [method, setMethod] = useState<Method>(currency === settings.base ? 'marx' : 'paypal');
+    const [method, setMethod] = useState<Method>(currency === settings.base ? 'bank_slip' : 'paypal');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -36,11 +37,11 @@ export default function CartClient({ settings }: { settings: CurrencySettings })
     );
     const total = priced.reduce((s, i) => s + i.amount, 0);
     const allFree = total === 0;
-    const methods: Method[] = currency === settings.base ? ['marx', 'bank_slip'] : ['paypal', 'bank_slip'];
+    const methods: Method[] = currency === settings.base ? ['bank_slip'] : ['paypal', 'bank_slip'];
 
     function selectCurrency(next: string) {
         setCurrency(next);
-        setMethod(next === settings.base ? 'marx' : 'paypal');
+        setMethod(next === settings.base ? 'bank_slip' : 'paypal');
     }
 
     async function checkout() {
@@ -63,7 +64,7 @@ export default function CartClient({ settings }: { settings: CurrencySettings })
                 window.location.assign(order.approveUrl);
                 return;
             }
-            setError('Card payments are being configured — please use bank transfer for now.');
+            throw new Error(`Unhandled payment method: ${method}`);
         } catch (e: unknown) {
             const err = e as { message?: string; code?: string };
             if (err.code === 'functions/unauthenticated' || (err.message ?? '').toLowerCase().includes('sign-in')) {

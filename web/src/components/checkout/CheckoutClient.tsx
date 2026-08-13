@@ -6,10 +6,10 @@ import type { CurrencySettings, Pricing, Sale } from '@ljeducare/shared';
 import { formatCurrency, resolvePrice } from '@ljeducare/shared';
 import { callFunction } from '@/lib/firebase/client';
 
-type Method = 'paypal' | 'marx' | 'bank_slip';
+type Method = 'paypal' | 'onepay' | 'bank_slip';
 
 const METHOD_META: Record<Method, { label: string; hint: string }> = {
-    marx: { label: 'Card payment (LKR)', hint: 'Visa/Master via Marx — Sri Lankan cards' },
+    onepay: { label: 'Card payment (LKR)', hint: 'Visa/Mastercard via OnePay — Sri Lankan cards' },
     paypal: { label: 'PayPal', hint: 'International cards & PayPal balance' },
     bank_slip: { label: 'Bank transfer', hint: 'Pay to the institute account, upload the slip' },
 };
@@ -30,7 +30,7 @@ export default function CheckoutClient({
 }) {
     const router = useRouter();
     const [currency, setCurrency] = useState(settings.base);
-    const [method, setMethod] = useState<Method>(currency === settings.base ? 'marx' : 'paypal');
+    const [method, setMethod] = useState<Method>(currency === settings.base ? 'onepay' : 'paypal');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -43,13 +43,13 @@ export default function CheckoutClient({
     }, [pricing, currency, settings]);
 
     const isFree = !price || price.amount === 0;
-    // Marx is LKR-only; PayPal doesn't process LKR — constrain methods by currency.
+    // OnePay is LKR-only; PayPal doesn't process LKR — constrain methods by currency.
     const methods: Method[] =
-        currency === settings.base ? ['marx', 'bank_slip'] : ['paypal', 'bank_slip'];
+        currency === settings.base ? ['onepay', 'bank_slip'] : ['paypal', 'bank_slip'];
 
     function selectCurrency(next: string) {
         setCurrency(next);
-        setMethod(next === settings.base ? 'marx' : 'paypal');
+        setMethod(next === settings.base ? 'onepay' : 'paypal');
     }
 
     async function handlePay() {
@@ -58,7 +58,7 @@ export default function CheckoutClient({
         try {
             const res = await callFunction<
                 { itemId: string; itemType: string; currency: string; method: Method },
-                { sale?: Sale; enrolled?: boolean; alreadyEnrolled?: boolean }
+                { sale?: Sale; enrolled?: boolean; alreadyEnrolled?: boolean; blocked?: string }
             >('initiateEnrollment', { itemId, itemType, currency, method });
 
             if (res.alreadyEnrolled || res.enrolled) {
@@ -66,8 +66,23 @@ export default function CheckoutClient({
                 return;
             }
             const sale = res.sale!;
-            if (method === 'bank_slip') {
+            // Route on the sale's actual status, not the local `method` — a resumed sale
+            // (idempotent retry) may already be settled or awaiting slip approval from an
+            // earlier attempt, regardless of which method was just picked.
+            if (sale.status === 'completed') {
+                router.push(`/payment/success/${sale.id}`);
+                return;
+            }
+            if (sale.status === 'pending_slip') {
                 router.push(`/payment/slip/${sale.id}`);
+                return;
+            }
+            if (method === 'onepay') {
+                const { redirectUrl } = await callFunction<{ saleId: string }, { redirectUrl: string }>(
+                    'onepayCreateCheckout',
+                    { saleId: sale.id },
+                );
+                window.location.assign(redirectUrl);
                 return;
             }
             if (method === 'paypal') {
@@ -83,8 +98,7 @@ export default function CheckoutClient({
                 window.location.assign(order.approveUrl);
                 return;
             }
-            // marx — gateway port lands with the Marx integration step
-            setError('Card payments are being configured — please use bank transfer for now.');
+            throw new Error(`Unhandled payment method: ${method}`);
         } catch (e: unknown) {
             setError((e as Error)?.message ?? 'Payment could not be started.');
         } finally {

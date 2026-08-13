@@ -81,6 +81,11 @@ const paypalCaptureOrder = onCall({ secrets: ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT
     const sale = saleDoc.data();
     if (sale.studentId !== uid) throw new HttpsError('permission-denied', 'Not your sale');
     if (sale.status === 'completed') return { success: true, alreadyCompleted: true };
+    if (!['pending_gateway', 'hold'].includes(sale.status)) {
+        // The sale was reconciled to another method (e.g. bank_slip) after this PayPal
+        // order was created — don't let a stale approval still capture it.
+        throw new HttpsError('failed-precondition', `Sale is no longer a gateway payment (${sale.status})`);
+    }
     if (!sale.gatewayOrderId) throw new HttpsError('failed-precondition', 'No PayPal order for this sale');
 
     let capture;

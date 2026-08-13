@@ -59,6 +59,20 @@ export default async function StudentTransactionsPage() {
                                                 Upload slip
                                             </Link>
                                         )}
+                                        {s.status === 'pending_gateway' && (
+                                            <Link href={`/payment/slip/${s.id}`} className="ml-2 text-xs text-primary hover:underline">
+                                                Complete payment
+                                            </Link>
+                                        )}
+                                        {(s.status === 'canceled' || s.status === 'failed') &&
+                                            ['class', 'course', 'quiz'].includes(s.itemType) && (
+                                                <Link
+                                                    href={`/checkout/${s.itemType}/${s.itemId}`}
+                                                    className="ml-2 text-xs text-primary hover:underline"
+                                                >
+                                                    Buy again
+                                                </Link>
+                                            )}
                                     </td>
                                 </tr>
                             ))}

@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { callFunction } from '@/lib/firebase/client';
 
-/** Captures the PayPal order on return, then routes to success/failed. */
+/** Captures the PayPal order (or verifies the OnePay transaction) on return, then routes to success/failed. */
 export default function PaymentRedirectClient() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -17,6 +17,7 @@ export default function PaymentRedirectClient() {
 
         const saleId = searchParams.get('saleId');
         const orderId = searchParams.get('orderId');
+        const gateway = searchParams.get('gateway');
         if (!saleId && !orderId) {
             setMessage('Missing payment reference.');
             return;
@@ -31,8 +32,12 @@ export default function PaymentRedirectClient() {
                 router.replace(`/payment/order/${orderId}`);
                 return;
             }
+            // OnePay has no separate "capture" step — by the time we're back here, OnePay
+            // has already decided the outcome. onepayVerifyTransaction just asks its status
+            // endpoint what happened; it never trusts anything the URL carried back.
+            const fn = gateway === 'onepay' ? 'onepayVerifyTransaction' : 'paypalCaptureOrder';
             try {
-                await callFunction<{ saleId: string }, { success: boolean }>('paypalCaptureOrder', { saleId: saleId! });
+                await callFunction<{ saleId: string }, { success: boolean }>(fn, { saleId: saleId! });
                 router.replace(`/payment/success/${saleId}`);
             } catch {
                 router.replace(`/payment/failed/${saleId}`);
