@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { FastForward, Maximize, Minimize, Pause, Play, Rewind, Volume2, VolumeX } from 'lucide-react';
 import { toEmbed } from '@/lib/videoEmbed';
 import Watermark from './Watermark';
 import { useVideoSecurity } from './useVideoSecurity';
+import { usePlayerFullscreen } from './usePlayerFullscreen';
 
 // Minimal typing for the bits of the YouTube IFrame Player API this file uses.
 interface YTPlayer {
@@ -16,6 +18,7 @@ interface YTPlayer {
     unMute(): void;
     isMuted(): boolean;
     setVolume(v: number): void;
+    getIframe(): HTMLIFrameElement | null;
     destroy(): void;
 }
 declare global {
@@ -24,7 +27,13 @@ declare global {
         YT?: {
             Player: new (
                 el: HTMLElement,
-                opts: { events: { onReady: () => void; onStateChange: (e: { data: number }) => void; onError: (e: { data: number }) => void } },
+                opts: {
+                    width?: number;
+                    height?: number;
+                    videoId?: string;
+                    playerVars?: Record<string, string | number>;
+                    events: { onReady: () => void; onStateChange: (e: { data: number }) => void; onError: (e: { data: number }) => void };
+                },
             ) => YTPlayer;
         };
     }
@@ -56,7 +65,11 @@ function formatTime(seconds: number): string {
  * YouTube plays inside a closed shadow root (ported from hybridLMS's YouTubePlayer)
  * so the raw iframe never appears in DevTools' Elements panel and is never directly
  * clickable — playback is entirely driven by the custom control bar below it via the
- * IFrame Player API, not by YouTube's own (now-hidden) controls.
+ * IFrame Player API, not by YouTube's own (hidden) controls. The player is handed a
+ * plain placeholder <div> and lets the API generate and manage its own iframe there —
+ * adopting a hand-built iframe into the API instead (an earlier version of this file)
+ * doesn't reliably work inside a closed shadow root; this is hybridLMS's exact,
+ * proven-in-production pattern.
  */
 export default function SecureVideoPlayer({
     url,
@@ -70,10 +83,13 @@ export default function SecureVideoPlayer({
     const embed = useMemo(() => toEmbed(url), [url]);
     const { blocked, reason } = useVideoSecurity(true);
 
+    const playerWrapperRef = useRef<HTMLDivElement>(null);
+    const { isFakeFullscreen, isFullscreen, toggleFullscreen } = usePlayerFullscreen(playerWrapperRef);
+
     const shadowHostRef = useRef<HTMLDivElement>(null);
     const shadowRootRef = useRef<ShadowRoot | null>(null);
     const stageRef = useRef<HTMLDivElement | null>(null);
-    const iframeElRef = useRef<HTMLIFrameElement | null>(null);
+    const playerDivRef = useRef<HTMLDivElement | null>(null);
     const playerRef = useRef<YTPlayer | null>(null);
 
     const [ytError, setYtError] = useState(false);
@@ -96,9 +112,8 @@ export default function SecureVideoPlayer({
         stage.style.setProperty('--yt-fit', String(Math.min(w / HD_W, h / HD_H) * OVERSCAN));
     }, []);
 
-    // Build the shadow-DOM stage + a nocookie iframe (own element, not YT-generated, so the
-    // privacy-enhanced domain survives) and adopt it into the IFrame Player API purely for
-    // event control — re-runs whenever the video actually changes (e.g. switching lessons).
+    // Set up the shadow-DOM stage (once) and (re)create the YT player for the current
+    // video — re-runs whenever the video actually changes (e.g. switching lessons).
     useEffect(() => {
         if (embed.kind !== 'youtube' || !embed.videoId) return undefined;
         setYtError(false);
@@ -109,56 +124,67 @@ export default function SecureVideoPlayer({
 
         const host = shadowHostRef.current;
         if (!host) return undefined;
-        if (!shadowRootRef.current) shadowRootRef.current = host.attachShadow({ mode: 'closed' });
-        const root = shadowRootRef.current;
-        root.innerHTML = ''; // clear the previous lesson's iframe, if any
+        if (!shadowRootRef.current) {
+            const root = host.attachShadow({ mode: 'closed' });
+            shadowRootRef.current = root;
+            const style = document.createElement('style');
+            style.textContent = `
+                .yt-stage { position: absolute; inset: 0; overflow: hidden; }
+                .yt-frame {
+                    position: absolute; top: 50%; left: 50%; width: ${HD_W}px; height: ${HD_H}px; border: 0;
+                    transform: translate(-50%, -50%) scale(var(--yt-fit, 0.5));
+                    transform-origin: center center;
+                }
+            `;
+            root.appendChild(style);
+            const stage = document.createElement('div');
+            stage.className = 'yt-stage';
+            root.appendChild(stage);
+            stageRef.current = stage;
+        }
 
-        const style = document.createElement('style');
-        style.textContent = `
-            .yt-stage { position: absolute; inset: 0; overflow: hidden; }
-            .yt-frame {
-                position: absolute; top: 50%; left: 50%; width: ${HD_W}px; height: ${HD_H}px; border: 0;
-                transform: translate(-50%, -50%) scale(var(--yt-fit, 0.5));
-                transform-origin: center center;
-            }
-        `;
-        root.appendChild(style);
-
-        const stage = document.createElement('div');
-        stage.className = 'yt-stage';
-        root.appendChild(stage);
-        stageRef.current = stage;
-
-        const iframe = document.createElement('iframe');
-        iframe.className = 'yt-frame';
-        iframe.title = title ?? 'Recording';
-        iframe.allow = 'accelerometer; encrypted-media; gyroscope; picture-in-picture';
-        iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-        const params = new URLSearchParams({
-            rel: '0',
-            modestbranding: '1',
-            disablekb: '1',
-            iv_load_policy: '3',
-            fs: '0',
-            playsinline: '1',
-            controls: '0', // native controls hidden — the custom bar below drives playback
-            enablejsapi: '1',
-            origin: window.location.origin,
-        });
-        iframe.src = `${embed.src}?${params.toString()}`;
-        stage.appendChild(iframe);
-        iframeElRef.current = iframe;
+        // A fresh placeholder for this video — YT.Player replaces it with its own iframe.
+        playerDivRef.current?.remove();
+        const placeholder = document.createElement('div');
+        stageRef.current?.appendChild(placeholder);
+        playerDivRef.current = placeholder;
 
         let cancelled = false;
-        const attach = () => {
-            if (cancelled || !window.YT?.Player || !iframeElRef.current) return;
-            playerRef.current = new window.YT.Player(iframeElRef.current, {
+        const createPlayer = () => {
+            if (cancelled || !window.YT?.Player || !playerDivRef.current) return;
+            playerRef.current?.destroy();
+            playerRef.current = new window.YT.Player(playerDivRef.current, {
+                width: HD_W,
+                height: HD_H,
+                videoId: embed.videoId,
+                playerVars: {
+                    controls: 0, // native controls hidden — the custom bar below drives playback
+                    rel: 0,
+                    modestbranding: 1,
+                    disablekb: 1,
+                    fs: 0, // YouTube's own fullscreen button stays off; ours targets the whole player
+                    iv_load_policy: 3,
+                    playsinline: 1,
+                    origin: window.location.origin,
+                },
                 events: {
                     onReady: () => {
                         if (cancelled) return;
                         setIsReady(true);
                         setDuration(playerRef.current?.getDuration() ?? 0);
                         setIsMuted(!!playerRef.current?.isMuted());
+                        // Re-tag the generated iframe so the fit/crop styles apply (the API
+                        // doesn't preserve the placeholder's class on replacement).
+                        try {
+                            const ifr = playerRef.current?.getIframe();
+                            if (ifr) {
+                                ifr.classList.add('yt-frame');
+                                ifr.setAttribute('width', String(HD_W));
+                                ifr.setAttribute('height', String(HD_H));
+                            }
+                        } catch {
+                            /* iframe not reachable */
+                        }
                         applyFit();
                     },
                     onStateChange: (e) => {
@@ -174,12 +200,12 @@ export default function SecureVideoPlayer({
         };
 
         if (window.YT?.Player) {
-            attach();
+            createPlayer();
         } else {
             const prev = window.onYouTubeIframeAPIReady;
             window.onYouTubeIframeAPIReady = () => {
                 prev?.();
-                attach();
+                createPlayer();
             };
             if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
                 const tag = document.createElement('script');
@@ -193,9 +219,10 @@ export default function SecureVideoPlayer({
             playerRef.current?.destroy();
             playerRef.current = null;
         };
-    }, [embed.kind, embed.videoId, embed.src, title, applyFit]);
+    }, [embed.kind, embed.videoId, applyFit]);
 
-    // Keep the fixed HD frame scaled to fit the visible card as it resizes.
+    // Keep the fixed HD frame scaled to fit the visible card as it resizes (responsive
+    // layout, orientation change, entering/leaving fullscreen).
     useEffect(() => {
         const host = shadowHostRef.current;
         if (!host || embed.kind !== 'youtube') return undefined;
@@ -203,9 +230,11 @@ export default function SecureVideoPlayer({
         const ro = typeof ResizeObserver !== 'undefined' ? new ResizeObserver(applyFit) : null;
         ro?.observe(host);
         window.addEventListener('resize', applyFit);
+        document.addEventListener('fullscreenchange', applyFit);
         return () => {
             ro?.disconnect();
             window.removeEventListener('resize', applyFit);
+            document.removeEventListener('fullscreenchange', applyFit);
         };
     }, [applyFit, embed.kind]);
 
@@ -276,7 +305,11 @@ export default function SecureVideoPlayer({
     const shownTime = isDragging ? dragValue : currentTimeSec;
 
     return (
-        <div className="relative aspect-video w-full overflow-hidden rounded-xl bg-black">
+        <div
+            ref={playerWrapperRef}
+            className="relative aspect-video w-full overflow-hidden rounded-xl bg-black"
+            style={isFakeFullscreen ? { position: 'fixed', inset: 0, width: '100vw', height: '100dvh', maxWidth: 'none', zIndex: 2147483647, borderRadius: 0 } : undefined}
+        >
             {embed.kind === 'youtube' && ytError ? (
                 <div className="absolute inset-0 flex items-center justify-center p-4 text-center text-sm text-white/70">
                     This video couldn&apos;t be loaded. Please refresh, or contact support if it keeps happening.
@@ -295,9 +328,20 @@ export default function SecureVideoPlayer({
                         className="absolute inset-0 z-10 cursor-pointer disabled:cursor-default"
                     />
                     {!isPlaying && isReady && (
-                        <span className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center text-5xl text-white/90 drop-shadow-lg">
-                            ▶
+                        <span className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center">
+                            <Play className="h-16 w-16 text-white/90 drop-shadow-lg" fill="currentColor" />
                         </span>
+                    )}
+
+                    {isFakeFullscreen && (
+                        <button
+                            type="button"
+                            onClick={toggleFullscreen}
+                            aria-label="Exit fullscreen"
+                            className="absolute top-3 right-3 z-40 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/60 text-white backdrop-blur-md transition hover:bg-black/80"
+                        >
+                            <Minimize className="h-5 w-5" />
+                        </button>
                     )}
 
                     <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-3 pb-2 pt-8">
@@ -318,22 +362,22 @@ export default function SecureVideoPlayer({
                             aria-label="Seek"
                             className="h-1.5 w-full cursor-pointer accent-primary disabled:cursor-default"
                         />
-                        <div className="mt-1.5 flex items-center gap-1.5 text-white">
+                        <div className="mt-1.5 flex items-center gap-1 text-white">
                             <button type="button" onClick={() => skip(-10)} disabled={!isReady} aria-label="Rewind 10 seconds" className="rounded p-1.5 hover:bg-white/10 disabled:opacity-40">
-                                ⏪
+                                <Rewind className="h-4 w-4" fill="currentColor" />
                             </button>
                             <button type="button" onClick={togglePlay} disabled={!isReady} aria-label={isPlaying ? 'Pause' : 'Play'} className="rounded p-1.5 hover:bg-white/10 disabled:opacity-40">
-                                {isPlaying ? '⏸' : '▶'}
+                                {isPlaying ? <Pause className="h-5 w-5" fill="currentColor" /> : <Play className="h-5 w-5" fill="currentColor" />}
                             </button>
                             <button type="button" onClick={() => skip(10)} disabled={!isReady} aria-label="Forward 10 seconds" className="rounded p-1.5 hover:bg-white/10 disabled:opacity-40">
-                                ⏩
+                                <FastForward className="h-4 w-4" fill="currentColor" />
                             </button>
                             <span className="ml-1 whitespace-nowrap font-mono text-xs tabular-nums text-white/80">
                                 {formatTime(shownTime)} / {formatTime(duration)}
                             </span>
                             <span className="flex-1" />
                             <button type="button" onClick={toggleMute} disabled={!isReady} aria-label={isMuted || volume === 0 ? 'Unmute' : 'Mute'} className="rounded p-1.5 hover:bg-white/10 disabled:opacity-40">
-                                {isMuted || volume === 0 ? '🔇' : '🔊'}
+                                {isMuted || volume === 0 ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
                             </button>
                             <input
                                 type="range"
@@ -345,6 +389,15 @@ export default function SecureVideoPlayer({
                                 aria-label="Volume"
                                 className="h-1.5 w-16 cursor-pointer accent-primary disabled:cursor-default"
                             />
+                            <button
+                                type="button"
+                                onClick={toggleFullscreen}
+                                disabled={!isReady}
+                                aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                                className="rounded p-1.5 hover:bg-white/10 disabled:opacity-40"
+                            >
+                                {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+                            </button>
                         </div>
                     </div>
                 </>
