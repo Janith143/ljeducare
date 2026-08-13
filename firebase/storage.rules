@@ -12,6 +12,12 @@ service firebase.storage {
       return request.resource.size < 5 * 1024 * 1024
         && request.resource.contentType.matches('image/.*');
     }
+    // Payment slips accept image or PDF — a separate helper so this doesn't loosen
+    // isImageUnder5MB()'s other callers (profile/category/landing/cover images).
+    function isSlipFileUnder5MB() {
+      return request.resource.size < 5 * 1024 * 1024
+        && (request.resource.contentType.matches('image/.*') || request.resource.contentType == 'application/pdf');
+    }
 
     match /site-assets/{file=**} {
       allow read: if true;
@@ -37,7 +43,7 @@ service firebase.storage {
     }
     match /payment-slips/{file=**} {
       allow read: if isAdminArea();
-      allow write: if isAuthed() && isImageUnder5MB();
+      allow write: if isAuthed() && isSlipFileUnder5MB();
     }
     match /certificates/{file=**} {
       allow read: if true; // public verification downloads

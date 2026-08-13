@@ -14,7 +14,7 @@ export default function SlipUploadClient({ saleId }: { saleId: string }) {
     async function handleUpload() {
         if (!file) return;
         if (file.size > 5 * 1024 * 1024) {
-            setError('Image must be under 5 MB.');
+            setError('File must be under 5 MB.');
             return;
         }
         setBusy(true);
@@ -46,7 +46,7 @@ export default function SlipUploadClient({ saleId }: { saleId: string }) {
             )}
             <input
                 type="file"
-                accept="image/*"
+                accept="image/*,application/pdf"
                 onChange={(e) => setFile(e.target.files?.[0] ?? null)}
                 className="input"
             />

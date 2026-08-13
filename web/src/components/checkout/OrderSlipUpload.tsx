@@ -13,7 +13,7 @@ export default function OrderSlipUpload({ orderId }: { orderId: string }) {
 
     async function handleUpload() {
         if (!file) return;
-        if (file.size > 5 * 1024 * 1024) { setError('Image must be under 5 MB.'); return; }
+        if (file.size > 5 * 1024 * 1024) { setError('File must be under 5 MB.'); return; }
         setBusy(true); setError(null);
         try {
             const fd = new FormData();
@@ -36,7 +36,7 @@ export default function OrderSlipUpload({ orderId }: { orderId: string }) {
                 Transfer the total to the institute bank account, then upload one slip covering the whole order.
             </p>
             {error && <p role="alert" className="rounded-lg bg-red-50 p-2 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">{error}</p>}
-            <input type="file" accept="image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="input" />
+            <input type="file" accept="image/*,application/pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className="input" />
             <button type="button" onClick={handleUpload} disabled={!file || busy} className="btn-primary w-full">
                 {busy ? 'Uploading…' : 'Submit slip for approval'}
             </button>
