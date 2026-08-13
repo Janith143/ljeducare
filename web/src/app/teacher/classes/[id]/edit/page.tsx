@@ -4,6 +4,7 @@ import { COLLECTIONS } from '@ljeducare/shared';
 import ClassForm from '@/components/teacher/ClassForm';
 import ZoomMeetingManager from '@/components/teacher/ZoomMeetingManager';
 import HomeworkSubmissions from '@/components/teacher/HomeworkSubmissions';
+import ClassRecordingsManager from '@/components/teacher/ClassRecordingsManager';
 import type { User } from '@ljeducare/shared';
 import { requireRole } from '@/lib/auth/session';
 import { CONTENT_ROLES, assignsTeacher } from '@/lib/auth/contentRoles';
@@ -62,6 +63,7 @@ export default async function EditClassPage({
         <div className="mx-auto max-w-2xl space-y-6">
             <h1 className="text-2xl font-bold">Edit class</h1>
             <ClassForm existing={cls} categories={categories} teachers={teachers} />
+            <ClassRecordingsManager classId={cls.id} recordings={cls.recordingUrls ?? {}} />
             <HomeworkSubmissions submissions={submissions} studentNames={studentNames} />
             <ZoomMeetingManager
                 info={{

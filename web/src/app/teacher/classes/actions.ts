@@ -207,6 +207,80 @@ export async function withdrawClassApprovalAction(classId: string) {
     }
 }
 
+const SESSION_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Only links SecureVideoPlayer can actually play — it classifies a URL as
+ * youtube | video | external (lib/videoEmbed.ts) and refuses to embed 'external',
+ * so anything else would save fine and then show students "can't be embedded
+ * securely". Rejecting at save time is the only place a teacher can act on it.
+ */
+function isPlayableRecordingUrl(url: string): boolean {
+    return (
+        /(?:youtube\.com\/(?:watch\?v=|embed\/|live\/)|youtu\.be\/)[\w-]{11}/.test(url) ||
+        /\.(mp4|webm|m3u8)(\?|$)/i.test(url)
+    );
+}
+
+/**
+ * Attach a recording link to one session date. Stored as
+ * classes/{id}.recordingUrls[YYYY-MM-DD] = string[] — the same shape the Zoom
+ * webhook writes and /watch/recording/[classId]/[date] reads, so manually added
+ * links get the identical enrolment + expiry + view-cap gating and play in the
+ * secure player. Several links per date are supported (multi-part sessions).
+ */
+export async function addClassRecordingAction(classId: string, date: string, url: string) {
+    const user = await requireRole(...CONTENT_ROLES);
+    const link = url.trim();
+    if (!SESSION_DATE_RE.test(date)) return { error: 'Pick a valid session date.' };
+    if (!link) return { error: 'Paste the recording link.' };
+    if (!isPlayableRecordingUrl(link)) {
+        return { error: 'Use a YouTube link, or a direct .mp4/.webm/.m3u8 file. Other links will not play in the secure player.' };
+    }
+
+    try {
+        const { db } = await authorize(user, classId);
+        const ref = db.collection(COLLECTIONS.CLASSES).doc(classId);
+        // Read-modify-write in a transaction: the Zoom webhook writes this same map,
+        // so a blind overwrite could drop an auto-captured recording.
+        await db.runTransaction(async (tx) => {
+            const snap = await tx.get(ref);
+            if (!snap.exists) throw new Error('Class not found.');
+            const map = { ...((snap.data()!.recordingUrls ?? {}) as Record<string, string[]>) };
+            const forDate = map[date] ?? [];
+            if (forDate.includes(link)) throw new Error('That link is already saved for this date.');
+            map[date] = [...forDate, link];
+            tx.update(ref, { recordingUrls: map });
+        });
+        revalidatePath(`/teacher/classes/${classId}/edit`);
+        return { ok: true };
+    } catch (e: unknown) {
+        return { error: (e as Error).message };
+    }
+}
+
+/** Detach one recording link; drops the date entirely once its last link goes. */
+export async function removeClassRecordingAction(classId: string, date: string, url: string) {
+    const user = await requireRole(...CONTENT_ROLES);
+    try {
+        const { db } = await authorize(user, classId);
+        const ref = db.collection(COLLECTIONS.CLASSES).doc(classId);
+        await db.runTransaction(async (tx) => {
+            const snap = await tx.get(ref);
+            if (!snap.exists) throw new Error('Class not found.');
+            const map = { ...((snap.data()!.recordingUrls ?? {}) as Record<string, string[]>) };
+            const remaining = (map[date] ?? []).filter((u) => u !== url);
+            if (remaining.length) map[date] = remaining;
+            else delete map[date];
+            tx.update(ref, { recordingUrls: map });
+        });
+        revalidatePath(`/teacher/classes/${classId}/edit`);
+        return { ok: true };
+    } catch (e: unknown) {
+        return { error: (e as Error).message };
+    }
+}
+
 /** Soft delete → recycle bin (ported source pattern). */
 export async function deleteClassAction(classId: string) {
     const user = await requireRole(...CONTENT_ROLES);
