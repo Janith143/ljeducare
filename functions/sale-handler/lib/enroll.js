@@ -86,9 +86,34 @@ const initiateEnrollment = onCall(async (request) => {
     if (!studentDoc.exists) throw new HttpsError('failed-precondition', 'Student profile not found');
     const student = studentDoc.data();
 
+    // Per-month weekly classes carry a coveredMonth (YYYY-MM) so access is tied to
+    // the month paid for, not the sale date (pay-June-30-for-July works correctly).
+    // Resolved up here because it also decides whether an existing enrollment may be
+    // re-purchased, below.
+    const isPerMonth = itemType === 'class' && resolved.item.weeklyPaymentOption === 'per_month';
+    const requestedMonth = /^\d{4}-\d{2}$/.test(request.data?.coveredMonth || '') ? request.data.coveredMonth : null;
+    const coveredMonth = isPerMonth ? requestedMonth || new Date().toISOString().slice(0, 7) : null;
+
     // Already enrolled → succeed idempotently.
+    // NOT for a per-month class whose target month is still unpaid: enrollment is
+    // permanent (finalizeSale arrayUnions the id and never removes it) but ACCESS is
+    // monthly — zoom-handler/join.js demands a completed sale with coveredMonth === the
+    // current month and otherwise throws RENEW_REQUIRED. Short-circuiting here on mere
+    // enrollment made that renewal unpayable: the join gate told the student to renew,
+    // and checkout then bounced them straight back out. Falling through lets them pay.
     if ((student[resolved.enrollField] || []).map(String).includes(String(itemId))) {
-        return { alreadyEnrolled: true };
+        if (!isPerMonth) return { alreadyEnrolled: true };
+        // Same query shape as the reuse branch below (equality-only, no composite index).
+        const priorSnap = await db
+            .collection('sales')
+            .where('studentId', '==', uid)
+            .where('itemId', '==', String(itemId))
+            .where('itemType', '==', itemType)
+            .get();
+        const monthAlreadyPaid = priorSnap.docs.some(
+            (d) => d.data().status === 'completed' && d.data().coveredMonth === coveredMonth,
+        );
+        if (monthAlreadyPaid) return { alreadyEnrolled: true, coveredMonth };
     }
 
     let price;
@@ -113,7 +138,13 @@ const initiateEnrollment = onCall(async (request) => {
         .get();
     const reusable = existing.docs
         .map((d) => ({ id: d.id, ...d.data() })) // don't trust the stored `id` field alone
-        .find((s) => ['pending_gateway', 'pending_slip'].includes(s.status));
+        .find(
+            (s) =>
+                ['pending_gateway', 'pending_slip'].includes(s.status) &&
+                // A per-month sale is only reusable for the month it covers — otherwise a
+                // half-finished August payment would be repurposed as September's.
+                (!isPerMonth || (s.coveredMonth ?? null) === coveredMonth),
+        );
     if (reusable && price.amount > 0) {
         const { sale: current, blocked } = await reconcileReusedSale(db, reusable, method, price, settings);
         return { sale: publicSale(current), resumed: true, ...(blocked ? { blocked } : {}) };
@@ -124,12 +155,6 @@ const initiateEnrollment = onCall(async (request) => {
         price.amount > 0
             ? buildSaleSnapshot(price, settings)
             : { currency, amount: 0, baseAmount: 0, fxRate: 1 };
-
-    // Per-month weekly classes carry a coveredMonth (YYYY-MM) so access is tied to
-    // the month paid for, not the sale date (pay-June-30-for-July works correctly).
-    const isPerMonth = itemType === 'class' && resolved.item.weeklyPaymentOption === 'per_month';
-    const requestedMonth = /^\d{4}-\d{2}$/.test(request.data?.coveredMonth || '') ? request.data.coveredMonth : null;
-    const coveredMonth = isPerMonth ? requestedMonth || new Date().toISOString().slice(0, 7) : null;
 
     // Free items settle immediately via the manual/free path; paid items take whichever
     // gateway the student chose (already validated against METHODS above).

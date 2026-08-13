@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import type { CurrencySettings, Pricing, Sale } from '@ljeducare/shared';
 import { formatCurrency, resolvePrice } from '@ljeducare/shared';
 import { callFunction } from '@/lib/firebase/client';
@@ -33,6 +34,7 @@ export default function CheckoutClient({
     const [method, setMethod] = useState<Method>(currency === settings.base ? 'onepay' : 'paypal');
     const [busy, setBusy] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [notice, setNotice] = useState<string | null>(null);
 
     const price = useMemo(() => {
         try {
@@ -55,13 +57,24 @@ export default function CheckoutClient({
     async function handlePay() {
         setBusy(true);
         setError(null);
+        setNotice(null);
         try {
             const res = await callFunction<
                 { itemId: string; itemType: string; currency: string; method: Method },
-                { sale?: Sale; enrolled?: boolean; alreadyEnrolled?: boolean; blocked?: string }
+                { sale?: Sale; enrolled?: boolean; alreadyEnrolled?: boolean; blocked?: string; coveredMonth?: string }
             >('initiateEnrollment', { itemId, itemType, currency, method });
 
-            if (res.alreadyEnrolled || res.enrolled) {
+            // Nothing to pay for. Explain it in place rather than silently bouncing the
+            // student to the dashboard, which reads as "the payment button is broken".
+            if (res.alreadyEnrolled) {
+                setNotice(
+                    res.coveredMonth
+                        ? `You've already paid for this class for ${res.coveredMonth}. Nothing more to pay right now.`
+                        : "You're already enrolled in this — no payment needed.",
+                );
+                return;
+            }
+            if (res.enrolled) {
                 router.push(res.sale ? `/payment/success/${res.sale.id}` : '/student');
                 return;
             }
@@ -108,6 +121,14 @@ export default function CheckoutClient({
 
     return (
         <div className="space-y-5">
+            {notice && (
+                <div role="status" className="space-y-2 rounded-lg bg-green-50 p-3 text-sm text-green-800 dark:bg-green-950 dark:text-green-300">
+                    <p>{notice}</p>
+                    <Link href="/student" className="inline-block font-medium underline">
+                        Go to my dashboard
+                    </Link>
+                </div>
+            )}
             {error && (
                 <p role="alert" className="rounded-lg bg-red-50 p-3 text-sm text-red-700 dark:bg-red-950 dark:text-red-300">
                     {error}
