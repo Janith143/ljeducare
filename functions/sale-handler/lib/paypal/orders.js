@@ -40,6 +40,7 @@ const paypalCreateOrder = onCall({ secrets: ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_
     }
 
     const siteUrl = (process.env.PUBLIC_SITE_URL || 'http://localhost:3000').replace(/\/+$/, '');
+    const value = toGatewayValue({ amount: sale.amount, currency: sale.currency });
     const order = await paypalFetch('/v2/checkout/orders', {
         method: 'POST',
         body: {
@@ -48,10 +49,7 @@ const paypalCreateOrder = onCall({ secrets: ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_
                 {
                     custom_id: String(saleId),
                     description: String(sale.itemName || 'Enrollment').slice(0, 127),
-                    amount: {
-                        currency_code: sale.currency,
-                        value: toGatewayValue({ amount: sale.amount, currency: sale.currency }),
-                    },
+                    amount: { currency_code: sale.currency, value },
                 },
             ],
             application_context: {
@@ -61,7 +59,9 @@ const paypalCreateOrder = onCall({ secrets: ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT_
                 cancel_url: `${siteUrl}/payment/failed/${encodeURIComponent(saleId)}`,
             },
         },
-        headers: { 'PayPal-Request-Id': `order-${saleId}` }, // PayPal-side idempotency
+        // PayPal-side idempotency. The key carries the price: a reused sale can be repriced
+        // (currency switch, price edit) and PayPal would replay the old order for an old key.
+        headers: { 'PayPal-Request-Id': `order-${saleId}-${sale.currency}-${value}` },
     });
 
     await saleRef.update({ gateway: 'paypal', gatewayOrderId: order.id });
@@ -92,7 +92,7 @@ const paypalCaptureOrder = onCall({ secrets: ['PAYPAL_CLIENT_ID', 'PAYPAL_CLIENT
     try {
         capture = await paypalFetch(`/v2/checkout/orders/${sale.gatewayOrderId}/capture`, {
             method: 'POST',
-            headers: { 'PayPal-Request-Id': `capture-${saleId}` },
+            headers: { 'PayPal-Request-Id': `capture-${sale.gatewayOrderId}` }, // one capture per PayPal order
         });
     } catch (e) {
         // Already captured (webhook or a parallel call won) → verify + settle.
