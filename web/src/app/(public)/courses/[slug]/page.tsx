@@ -4,16 +4,12 @@ import { notFound } from 'next/navigation';
 import PriceTag from '@/components/catalog/PriceTag';
 import TeacherByline from '@/components/catalog/TeacherByline';
 import AddToCartButton from '@/components/cart/AddToCartButton';
-import { getCourseBySlug, getTeacherPublicById, listPublishedCourses } from '@/lib/data/catalog';
+import { getCourseBySlug, getTeacherPublicById } from '@/lib/data/catalog';
 import { getCurrencySettings } from '@/lib/data/currencies';
 
-export const revalidate = 60;
-export const dynamicParams = true;
-
-export async function generateStaticParams() {
-    const courses = await listPublishedCourses();
-    return courses.slice(0, 50).map((c) => ({ slug: c.slug }));
-}
+// Dynamic, not ISR: build-time HTML ships in every App Hosting instance and is never
+// reliably revalidated, so an edited price kept showing while checkout charged the new one.
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
     params,

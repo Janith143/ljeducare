@@ -6,13 +6,9 @@ import AddToCartButton from '@/components/cart/AddToCartButton';
 import { listPublishedQuizzes } from '@/lib/data/catalog';
 import { getCurrencySettings } from '@/lib/data/currencies';
 
-export const revalidate = 60;
-export const dynamicParams = true;
-
-export async function generateStaticParams() {
-    const quizzes = await listPublishedQuizzes();
-    return quizzes.slice(0, 50).map((q) => ({ slug: q.slug }));
-}
+// Dynamic, not ISR: build-time HTML ships in every App Hosting instance and is never
+// reliably revalidated, so an edited price kept showing while checkout charged the new one.
+export const dynamic = 'force-dynamic';
 
 async function getQuizBySlug(slug: string) {
     const all = await listPublishedQuizzes();
