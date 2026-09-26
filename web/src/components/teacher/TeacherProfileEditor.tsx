@@ -207,14 +207,14 @@ export default function TeacherProfileEditor({ staff }: { staff: EditableStaff |
             </label>
 
             <StringList label="Subjects" placeholder="e.g. Physics" value={subjects} onChange={setSubjects}
-                help="Also used to place you under the right subject on the homepage." />
+                help="Shown on your profile. You're listed under a subject on the portal once you publish a class or course in it." />
             <StringList label="Qualifications" placeholder="e.g. BSc (Hons) Physics, University of Colombo" value={qualifications} onChange={setQualifications} />
             <StringList label="Languages" placeholder="e.g. Sinhala" value={languages} onChange={setLanguages} />
             <StringList label="Achievements" placeholder="e.g. 20+ island-rank students" value={achievements} onChange={setAchievements} />
 
             <label className="flex items-center gap-2 rounded-lg border border-light-border p-3 text-sm font-medium dark:border-dark-border">
                 <input type="checkbox" checked={isPublished} onChange={(e) => setIsPublished(e.target.checked)} />
-                Show my profile publicly (list me on the Teachers page and next to my classes)
+                Show my profile publicly (list me on the Teachers page and under my subjects)
             </label>
 
             {/* Read-only, institute-managed */}

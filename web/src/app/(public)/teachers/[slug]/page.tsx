@@ -2,16 +2,12 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import ClassCard from '@/components/catalog/ClassCard';
-import { getTeacherBySlug, listPublishedClasses, listPublishedTeachers } from '@/lib/data/catalog';
+import { getTeacherBySlug, listPublishedClasses } from '@/lib/data/catalog';
 import { getCurrencySettings } from '@/lib/data/currencies';
 
-export const revalidate = 300;
-export const dynamicParams = true;
-
-export async function generateStaticParams() {
-    const teachers = await listPublishedTeachers();
-    return teachers.map((t) => ({ slug: t.slug }));
-}
+// Dynamic, not ISR: build-time HTML ships in every App Hosting instance and is never
+// reliably revalidated, so an edited class price kept showing on this page's cards.
+export const dynamic = 'force-dynamic';
 
 export async function generateMetadata({
     params,
@@ -47,8 +43,13 @@ export default async function TeacherBioPage({
             </nav>
 
             <header className="flex items-center gap-5">
-                <span className="flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-primary/10 text-2xl font-bold text-primary">
-                    {teacher.name.split(' ').map((w) => w[0]).slice(0, 2).join('')}
+                <span className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-2xl font-bold text-primary">
+                    {teacher.profileImage || teacher.avatar ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={teacher.profileImage || teacher.avatar} alt={teacher.name} className="h-full w-full object-cover" />
+                    ) : (
+                        teacher.name.split(' ').map((w) => w[0]).slice(0, 2).join('')
+                    )}
                 </span>
                 <div>
                     <h1 className="text-3xl font-bold">{teacher.name}</h1>

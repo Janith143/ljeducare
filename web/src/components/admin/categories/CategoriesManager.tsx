@@ -11,7 +11,7 @@ import {
     type CategoryFormInput,
 } from '@/app/admin/categories/actions';
 
-interface TeacherOpt { id: string; name: string }
+interface TeacherOpt { id: string; name: string; isPublished?: boolean }
 
 const EMPTY: CategoryFormInput = { name: '', description: '', image: '', featured: false, enabled: true, pinnedTeacherIds: [] };
 
@@ -129,12 +129,19 @@ export default function CategoriesManager({ categories, teachers }: { categories
                                 const on = (form.pinnedTeacherIds ?? []).includes(t.id);
                                 return (
                                     <button key={t.id} type="button" onClick={() => togglePin(t.id)}
+                                        title={t.isPublished ? undefined : 'Not shown publicly until their profile is published'}
                                         className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${on ? 'border-primary bg-primary text-white' : 'border-light-border hover:border-primary dark:border-dark-border'}`}>
-                                        {t.name}
+                                        {t.name}{t.isPublished ? '' : ' · hidden'}
                                     </button>
                                 );
                             })}
                         </div>
+                        {teachers.some((t) => !t.isPublished && (form.pinnedTeacherIds ?? []).includes(t.id)) && (
+                            <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+                                Teachers marked “hidden” won’t appear under this subject until their profile is published —
+                                tick “Published” for them under Staff.
+                            </p>
+                        )}
                     </div>
                 )}
 

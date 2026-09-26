@@ -79,24 +79,23 @@ export const listPublishedQuizzes = unstable_cache(
     { revalidate: 60, tags: [CACHE_TAGS.quizzes] },
 );
 
-export const listPublishedTeachers = unstable_cache(
-    async (): Promise<StaffMember[]> => {
-        const snap = await adminDb()
-            .collection(COLLECTIONS.STAFF)
-            .where('isPublished', '==', true)
-            .get();
-        return snap.docs
-            .map((d) => ({ ...(d.data() as StaffMember), id: d.id }))
-            .filter((s) => !s.isDeleted)
-            // Money fields are institute-internal.
-            .map(({ commissionRate, manualBalance, totalEarned, lastReset, ...pub }) => {
-                void commissionRate; void manualBalance; void totalEarned; void lastReset;
-                return pub as StaffMember;
-            });
-    },
-    ['published-teachers'],
-    { revalidate: 300, tags: [CACHE_TAGS.teachers] },
-);
+// Read FRESH (no unstable_cache), like categories: a handful of docs, and an admin
+// publishing a teacher or changing their photo must show on every App Hosting instance
+// at once — per-instance caches only get revalidated on the instance that saved.
+export async function listPublishedTeachers(): Promise<StaffMember[]> {
+    const snap = await adminDb()
+        .collection(COLLECTIONS.STAFF)
+        .where('isPublished', '==', true)
+        .get();
+    return snap.docs
+        .map((d) => ({ ...(d.data() as StaffMember), id: d.id }))
+        .filter((s) => !s.isDeleted)
+        // Money fields are institute-internal.
+        .map(({ commissionRate, manualBalance, totalEarned, lastReset, ...pub }) => {
+            void commissionRate; void manualBalance; void totalEarned; void lastReset;
+            return pub as StaffMember;
+        });
+}
 
 export async function getTeacherBySlug(slug: string): Promise<StaffMember | null> {
     const all = await listPublishedTeachers();

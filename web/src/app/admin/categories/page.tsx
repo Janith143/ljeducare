@@ -22,7 +22,7 @@ export default async function AdminCategoriesPage() {
     const teachers = staffSnap.docs
         .map((d) => ({ ...(d.data() as StaffMember), id: d.id }))
         .filter((s) => !s.isDeleted)
-        .map((s) => ({ id: s.id, name: s.name }));
+        .map((s) => ({ id: s.id, name: s.name, isPublished: s.isPublished === true }));
     const homepage = (hpDoc.data() as HomepageSettings) ?? {};
 
     return (

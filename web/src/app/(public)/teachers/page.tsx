@@ -32,8 +32,13 @@ export default async function TeachersPage({ searchParams }: { searchParams: Pro
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                     {teachers.map((t) => (
                         <Link key={t.id} href={`/teachers/${t.slug}`} className="card group flex items-center gap-4 transition-shadow hover:shadow-md">
-                            <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-bold text-primary">
-                                {t.name.split(' ').map((w) => w[0]).slice(0, 2).join('')}
+                            <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-lg font-bold text-primary">
+                                {t.profileImage || t.avatar ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={t.profileImage || t.avatar} alt="" className="h-full w-full object-cover" />
+                                ) : (
+                                    t.name.split(' ').map((w) => w[0]).slice(0, 2).join('')
+                                )}
                             </span>
                             <span>
                                 <span className="block font-semibold group-hover:text-primary">{t.name}</span>

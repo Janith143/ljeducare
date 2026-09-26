@@ -1,9 +1,10 @@
 'use server';
 
-import { revalidatePath } from 'next/cache';
+import { randomUUID } from 'node:crypto';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import type { Role } from '@ljeducare/shared';
-import { COLLECTIONS, isTeachingRole } from '@ljeducare/shared';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
+import { COLLECTIONS, STORAGE_PATHS, isTeachingRole } from '@ljeducare/shared';
+import { adminAuth, adminDb, adminStorage } from '@/lib/firebase/admin';
 import { requirePermission } from '@/lib/auth/session';
 import { ensureStaffProfile } from '@/lib/data/staff';
 import { cascadeTeacherContent, countAffectedStudents } from '@/lib/data/teacherCascade';
@@ -74,6 +75,63 @@ export async function setCommissionAction(staffId: string, commissionRate: numbe
     await requirePermission('staff');
     const rate = Math.min(100, Math.max(0, Number(commissionRate) || 0));
     await adminDb().doc(`${COLLECTIONS.STAFF}/${staffId}`).set({ commissionRate: rate }, { merge: true });
+    revalidatePath('/admin/staff');
+    return { ok: true };
+}
+
+/** The staff doc, only while it's a live (not removed) profile. */
+async function liveStaffRef(staffId: string) {
+    const ref = adminDb().doc(`${COLLECTIONS.STAFF}/${String(staffId)}`);
+    const snap = await ref.get();
+    return snap.exists && !snap.data()?.isDeleted ? ref : null;
+}
+
+/**
+ * Show/hide a teacher publicly (Teachers page, subject sections, /teachers/[slug]).
+ * Until now only the teacher could tick this, so a teacher who never did was invisible
+ * under every subject an admin pinned them to.
+ */
+export async function setStaffPublishedAction(staffId: string, isPublished: boolean) {
+    await requirePermission('staff');
+    const ref = await liveStaffRef(staffId);
+    if (!ref) return { error: 'Staff profile not found.' };
+    await ref.update({ isPublished: isPublished === true });
+    revalidateTag('teachers');
+    revalidatePath('/admin/staff');
+    return { ok: true };
+}
+
+/** Set (form field `file`, an already-cropped image) or clear a teacher's profile photo. */
+export async function saveStaffPhotoAction(formData: FormData): Promise<{ ok?: true; error?: string }> {
+    await requirePermission('staff');
+    const staffId = String(formData.get('staffId') ?? '');
+    const ref = staffId ? await liveStaffRef(staffId) : null;
+    if (!ref) return { error: 'Staff profile not found.' };
+
+    let profileImage = '';
+    const file = formData.get('file');
+    if (file instanceof File) {
+        if (!file.type.startsWith('image/')) return { error: 'Please choose an image file.' };
+        if (file.size > 5 * 1024 * 1024) return { error: 'Image must be under 5 MB.' };
+        const bucketName = process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET;
+        if (!bucketName) return { error: 'Storage is not configured.' };
+        try {
+            const token = randomUUID();
+            const path = `${STORAGE_PATHS.PROFILE_IMAGES}/teacher-${ref.id}-${Date.now()}.jpg`;
+            await adminStorage()
+                .bucket(bucketName)
+                .file(path)
+                .save(Buffer.from(await file.arrayBuffer()), {
+                    metadata: { contentType: file.type, metadata: { firebaseStorageDownloadTokens: token } },
+                });
+            profileImage = `https://firebasestorage.googleapis.com/v0/b/${bucketName}/o/${encodeURIComponent(path)}?alt=media&token=${token}`;
+        } catch (e: unknown) {
+            return { error: (e as Error).message };
+        }
+    }
+
+    await ref.update({ profileImage });
+    revalidateTag('teachers');
     revalidatePath('/admin/staff');
     return { ok: true };
 }
