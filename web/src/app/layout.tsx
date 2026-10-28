@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import TikTokPixel from '@/components/analytics/TikTokPixel';
 import { CartProvider } from '@/providers/CartProvider';
 import { SITE } from '@/lib/site';
 import './globals.css';
@@ -17,6 +18,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <html lang="en" suppressHydrationWarning>
             <body>
                 <CartProvider>{children}</CartProvider>
+                <TikTokPixel />
             </body>
         </html>
     );

@@ -40,6 +40,11 @@ env:
   - variable: NEXT_PUBLIC_SITE_URL
     value: https://ljeducare.com
 
+  # ── TikTok Pixel (PUBLIC id — visible in the page source of any site that runs it).
+  #    Leave unset locally so dev never reports to the live pixel. ──
+  - variable: NEXT_PUBLIC_TIKTOK_PIXEL_ID
+    value: DBGQBGJC77UEENV8C70G
+
   # ── Server-side secrets (Cloud Secret Manager). Create them first with:
   #      firebase apphosting:secrets:set AUTH_COOKIE_SIGNATURE_KEY_CURRENT
   #      firebase apphosting:secrets:set AUTH_COOKIE_SIGNATURE_KEY_PREVIOUS
