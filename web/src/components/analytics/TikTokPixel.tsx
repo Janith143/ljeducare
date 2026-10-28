@@ -13,9 +13,15 @@ declare global {
 // Set in apphosting.yaml. Unset locally on purpose: dev must not report to the live pixel.
 const PIXEL_ID = process.env.NEXT_PUBLIC_TIKTOK_PIXEL_ID;
 
-// Staff areas never get the ad pixel: their URLs carry internal ids, and staff browsing
-// would only pollute the audiences. (/kiosk-pair is a public page and is still tracked.)
-const STAFF_AREA = /^\/(admin|teacher|kiosk)(\/|$)/;
+// ALLOWLIST of public browse pages — never a denylist. The pixel sends the page's full URL
+// (query string included) to TikTok, and everywhere else carries something that must stay
+// private: /auth/action?oobCode=… is a one-time password-reset/verify code, /payment/*
+// carries sale ids and gateway tokens, /login, /student, /admin, /teacher, /kiosk are
+// account areas. New routes stay unreported until deliberately added here. (/search is out
+// too: free-text queries.) Auth and payment links arrive as full page loads, so the script
+// is never loaded on them.
+const PUBLIC_PAGE =
+    /^\/($|(portal|courses|classes|quizzes|teachers|categories|exams|cart|terms|privacy|refund-policy)(\/|$))/;
 
 /**
  * TikTok Pixel. TikTok's stock snippet reports one page view per full page load, but this
@@ -24,7 +30,7 @@ const STAFF_AREA = /^\/(admin|teacher|kiosk)(\/|$)/;
  */
 export default function TikTokPixel() {
     const pathname = usePathname();
-    const tracked = !!PIXEL_ID && !STAFF_AREA.test(pathname);
+    const tracked = !!PIXEL_ID && PUBLIC_PAGE.test(pathname);
     const snippetRan = useRef(false);
 
     useEffect(() => {
